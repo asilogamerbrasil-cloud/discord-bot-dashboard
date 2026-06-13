@@ -1,37 +1,31 @@
 import NextAuth from 'next-auth';
+import DiscordProvider from 'next-auth/providers/discord';
 
 const handler = NextAuth({
   providers: [
-    {
-      id: 'discord',
-      name: 'Discord',
-      type: 'oauth',
+    DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID || '',
       clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-      authorization: {
-        url: 'https://discord.com/api/oauth2/authorize',
-        params: { scope: 'identify guilds' },
-      },
-      token: 'https://discord.com/api/oauth2/token',
-      userinfo: 'https://discord.com/api/users/@me',
-      profile(profile) {
-        return {
-          id: profile.id,
-          name: profile.global_name || profile.username,
-          email: profile.email,
-          image: profile.avatar
-            ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
-            : null,
-        };
-      },
-    },
+    }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'super-secret-key-at-least-32-chars-long',
   pages: {
     signIn: '/login',
   },
   session: {
     strategy: 'jwt',
+  },
+  debug: true,
+  logger: {
+    error(code, ...args) {
+      console.error('NextAuth ERROR:', code, JSON.stringify(args));
+    },
+    warn(code, ...args) {
+      console.warn('NextAuth WARN:', code, JSON.stringify(args));
+    },
+    debug(code, ...args) {
+      console.log('NextAuth DEBUG:', code, JSON.stringify(args));
+    },
   },
 });
 
