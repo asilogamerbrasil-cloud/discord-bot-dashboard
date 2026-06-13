@@ -1,10 +1,11 @@
 import type { Client } from 'discord.js';
 import { ActivityType } from 'discord.js';
-import { db } from '../db/index.js';
+import { getDb } from '../db/index.js';
 import { configuracaoGeral } from '../db/schema.js';
 
 export class GerenciadorConfig {
   static async carregarDoBanco() {
+    const db = getDb();
     const resultado = await db.select().from(configuracaoGeral).limit(1);
 
     if (resultado.length === 0) {

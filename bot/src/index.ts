@@ -8,7 +8,7 @@ const PORTA = parseInt(process.env.PORT || '3001');
 
 const servidor = createServer((_req, res) => {
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ status: 'online' }));
+  res.end(JSON.stringify({ status: 'online', uptime: process.uptime() }));
 });
 
 servidor.listen(PORTA, () => {
@@ -25,20 +25,27 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message, Partials.User],
 });
 
-client.on('ready', (c) => {
-  console.log(`Bot conectado como ${c.user.tag}`);
-  console.log(`Servidores: ${c.guilds.cache.size}`);
-});
+async function iniciar() {
+  try {
+    await client.login(process.env.DISCORD_TOKEN);
+    console.log('Bot conectado!');
 
-client.on('error', (e) => console.error('Erro Discord:', e));
+    const { registrarComandos } = await import('./comandos/index.js');
+    await registrarComandos();
 
-console.log('Tentando login no Discord...');
-console.log('Token presente:', !!process.env.DISCORD_TOKEN);
-console.log('Token primeiros 20 chars:', process.env.DISCORD_TOKEN?.substring(0, 20));
+    const { eventoReady } = await import('./eventos/ready.js');
+    const { eventoInteraction } = await import('./eventos/interaction.js');
 
-client.login(process.env.DISCORD_TOKEN).then(() => {
-  console.log('Login bem-sucedido!');
-}).catch((erro) => {
-  console.error('Falha no login:', erro.message);
-  console.error('Stack:', erro.stack);
-});
+    client.on('ready', eventoReady);
+    client.on('interactionCreate', eventoInteraction);
+
+    const readyClient = client as Client<true>;
+    if (client.isReady()) {
+      await eventoReady(readyClient);
+    }
+  } catch (erro) {
+    console.error('Erro ao iniciar:', erro);
+  }
+}
+
+iniciar();
