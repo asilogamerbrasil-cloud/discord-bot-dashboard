@@ -1,13 +1,21 @@
 import { config } from 'dotenv';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { createServer } from 'http';
-import { registrarComandos } from './comandos/index.js';
-import { eventoReady } from './eventos/ready.js';
-import { eventoInteraction } from './eventos/interaction.js';
 
 config();
 
-export const client = new Client({
+const PORTA = parseInt(process.env.PORT || '3001');
+
+const servidor = createServer((_req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'online' }));
+});
+
+servidor.listen(PORTA, () => {
+  console.log(`HTTP ouvindo na porta ${PORTA}`);
+});
+
+const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
@@ -17,30 +25,20 @@ export const client = new Client({
   partials: [Partials.Channel, Partials.Message, Partials.User],
 });
 
-const PORTA = parseInt(process.env.PORT || '3001');
-
-const servidor = createServer((_req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ status: 'online', uptime: process.uptime() }));
+client.on('ready', (c) => {
+  console.log(`Bot conectado como ${c.user.tag}`);
+  console.log(`Servidores: ${c.guilds.cache.size}`);
 });
 
-async function iniciar() {
-  try {
-    await registrarComandos();
+client.on('error', (e) => console.error('Erro Discord:', e));
 
-    client.on('ready', eventoReady);
-    client.on('interactionCreate', eventoInteraction);
+console.log('Tentando login no Discord...');
+console.log('Token presente:', !!process.env.DISCORD_TOKEN);
+console.log('Token primeiros 20 chars:', process.env.DISCORD_TOKEN?.substring(0, 20));
 
-    await client.login(process.env.DISCORD_TOKEN);
-    console.log('Bot iniciado com sucesso!');
-
-    servidor.listen(PORTA, () => {
-      console.log(`Servidor HTTP ouvindo na porta ${PORTA}`);
-    });
-  } catch (erro) {
-    console.error('Erro ao iniciar o bot:', erro);
-    process.exit(1);
-  }
-}
-
-iniciar();
+client.login(process.env.DISCORD_TOKEN).then(() => {
+  console.log('Login bem-sucedido!');
+}).catch((erro) => {
+  console.error('Falha no login:', erro.message);
+  console.error('Stack:', erro.stack);
+});
