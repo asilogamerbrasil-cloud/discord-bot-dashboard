@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "nixpacks",
+    "config": {
+      "installCommand": "npm install",
+      "nixpacksVersion": "1.28.0"
+    }
+  }
+}

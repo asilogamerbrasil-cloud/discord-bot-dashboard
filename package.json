@@ -1,0 +1,19 @@
+{
+  "name": "discord-bot-manager",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Bot Discord com Dashboard Web",
+  "scripts": {
+    "dev:bot": "npm run dev -w bot",
+    "dev:dashboard": "npm run dev -w dashboard",
+    "dev": "concurrently \"npm run dev:bot\" \"npm run dev:dashboard\"",
+    "build": "npm run build -w bot && npm run build -w dashboard",
+    "db:generate": "npm run db:generate -w bot",
+    "db:push": "npm run db:push -w bot"
+  },
+  "workspaces": ["bot", "dashboard", "shared"],
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  }
+}

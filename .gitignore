@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+.next/
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Ambiente
+.env
+.env.local
+.env.production
+
+# Banco de Dados
+bot/data/
+*.db
+*.db-journal
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
