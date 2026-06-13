@@ -1,8 +1,14 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { useAuth } from '@/components/AuthProvider';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function PaginaLogin() {
+function LoginContent() {
+  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const erro = searchParams.get('erro');
+
   return (
     <div className="min-h-screen bg-[#1E1F22] flex items-center justify-center">
       <div className="bg-[#2B2D31] border border-[#313338] rounded-lg p-8 w-full max-w-md text-center">
@@ -14,11 +20,20 @@ export default function PaginaLogin() {
 
         <h1 className="text-xl font-bold text-white mb-2">Painel do Bot</h1>
         <p className="text-[#B5BAC1] text-sm mb-8">
-          Faca login com sua conta Discord para acessar o painel de controle.
+          Faca login com sua conta Discord para acessar o painel.
         </p>
 
+        {erro && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-md mb-4">
+            {erro === 'token' && 'Erro ao autenticar com Discord. Verifique as credenciais.'}
+            {erro === 'user' && 'Erro ao obter dados do usuario.'}
+            {erro === 'sem_codigo' && 'Codigo de autorizacao nao encontrado.'}
+            {erro === 'desconhecido' && 'Erro desconhecido. Tente novamente.'}
+          </div>
+        )}
+
         <button
-          onClick={() => signIn('discord', { callbackUrl: '/' })}
+          onClick={login}
           className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -28,5 +43,13 @@ export default function PaginaLogin() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function PaginaLogin() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#1E1F22] flex items-center justify-center"><div className="animate-pulse text-[#B5BAC1]">Carregando...</div></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

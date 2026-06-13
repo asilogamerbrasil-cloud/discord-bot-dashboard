@@ -4,18 +4,18 @@ import { configuracaoGeral, administradores } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { atualizarBotPerfil } from '@/lib/discord-api';
 import { z } from 'zod';
-import { getToken } from 'next-auth/jwt';
+import { obterSessao } from '@/lib/auth';
 import type { NextRequest } from 'next/server';
 
-async function verificarAdmin(req: NextRequest) {
-  const token = await getToken({ req });
-  if (!token?.discordId) return false;
+async function verificarAdmin() {
+  const sessao = await obterSessao();
+  if (!sessao) return false;
 
   const db = getDb();
   const admins = await db
     .select()
     .from(administradores)
-    .where(eq(administradores.discordId, token.discordId as string))
+    .where(eq(administradores.discordId, sessao.id))
     .limit(1);
 
   return admins.length > 0;
@@ -48,7 +48,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await verificarAdmin(req))) {
+  if (!(await verificarAdmin())) {
     return NextResponse.json({ erro: 'Acesso negado' }, { status: 403 });
   }
 

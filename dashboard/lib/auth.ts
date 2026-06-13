@@ -1,51 +1,48 @@
-import type { NextAuthOptions } from 'next-auth';
-import DiscordProvider from 'next-auth/providers/discord';
+import { SignJWT, jwtVerify } from 'jose';
+import { cookies } from 'next/headers';
 
-export function getAuthOptions(): NextAuthOptions {
-  return {
-    providers: [
-      DiscordProvider({
-        clientId: process.env.DISCORD_CLIENT_ID!,
-        clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-        authorization: {
-          params: {
-            scope: 'identify guilds',
-          },
-        },
-      }),
-    ],
-    callbacks: {
-      async jwt({ token, account, profile }) {
-        if (account) {
-          token.accessToken = account.access_token;
-          token.discordId = account.providerAccountId;
-        }
-        if (profile) {
-          const p = profile as { username?: string; avatar?: string; global_name?: string };
-          token.username = p.username;
-          token.globalName = p.global_name || p.username;
-          token.avatar = p.avatar;
-        }
-        return token;
-      },
-      async session({ session, token }) {
-        if (session.user) {
-          session.user.id = token.discordId as string;
-          session.user.name = (token.globalName as string) || (token.username as string) || null;
-          session.user.image = token.avatar
-            ? `https://cdn.discordapp.com/avatars/${token.discordId}/${token.avatar}.png`
-            : null;
-        }
-        return session;
-      },
-    },
-    pages: {
-      signIn: '/login',
-      error: '/login',
-    },
-    secret: process.env.NEXTAUTH_SECRET,
-    session: {
-      strategy: 'jwt',
-    },
-  };
+const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'super-secret-key-minimum-32-chars!!');
+const COOKIE_NAME = 'auth_token';
+
+export interface SessaoUsuario {
+  id: string;
+  nome: string;
+  avatar: string | null;
+  accessToken: string;
+}
+
+export async function criarSessao(usuario: SessaoUsuario): Promise<string> {
+  const token = await new SignJWT({ ...usuario })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime('7d')
+    .sign(SECRET);
+
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  return token;
+}
+
+export async function obterSessao(): Promise<SessaoUsuario | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(COOKIE_NAME)?.value;
+    if (!token) return null;
+
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload as unknown as SessaoUsuario;
+  } catch {
+    return null;
+  }
+}
+
+export async function destruirSessao() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
 }

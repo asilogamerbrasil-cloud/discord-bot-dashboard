@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/components/AuthProvider';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -24,7 +24,7 @@ const menus = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user, logout } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
 
   return (
@@ -68,15 +68,15 @@ export function Sidebar() {
           onClick={() => setMenuAberto(!menuAberto)}
           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#313338] transition-colors text-left"
         >
-          {session?.user?.image ? (
-            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full" />
+          {user?.image ? (
+            <img src={user.image} alt="" className="w-8 h-8 rounded-full" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center text-xs font-bold text-white">
-              {session?.user?.name?.[0] || '?'}
+              {user?.name?.[0] || '?'}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white truncate">{session?.user?.name}</p>
+            <p className="text-sm text-white truncate">{user?.name}</p>
             <p className="text-xs text-[#B5BAC1]">Admin</p>
           </div>
         </button>
@@ -84,7 +84,7 @@ export function Sidebar() {
         {menuAberto && (
           <div className="px-4 pb-3">
             <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
+              onClick={logout}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
             >
               <LogOut className="w-4 h-4" />

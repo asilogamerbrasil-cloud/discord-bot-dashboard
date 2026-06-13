@@ -1,30 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { administradores } from '@/lib/schema';
-import { eq, and } from 'drizzle-orm';
-import { getToken } from 'next-auth/jwt';
+import { eq } from 'drizzle-orm';
+import { obterSessao } from '@/lib/auth';
 import type { NextRequest } from 'next/server';
 
-async function isOwner(req: NextRequest): Promise<boolean> {
-  const token = await getToken({ req });
-  if (!token?.discordId) return false;
+async function verificarOwner(): Promise<boolean> {
+  const sessao = await obterSessao();
+  if (!sessao) return false;
 
   const db = getDb();
   const admins = await db
     .select()
     .from(administradores)
-    .where(
-      and(
-        eq(administradores.discordId, token.discordId as string),
-        eq(administradores.role, 'owner')
-      )
-    )
+    .where(eq(administradores.discordId, sessao.id))
     .limit(1);
 
-  return admins.length > 0;
+  if (admins.length === 0) return false;
+  return admins[0].role === 'owner';
 }
 
-async function ensureOwnerOnFirstAccess(discordId: string, nome: string, avatarUrl?: string) {
+async function garantirOwnerPrimeiroAcesso(discordId: string, nome: string, avatarUrl?: string) {
   const db = getDb();
   const existing = await db.select().from(administradores);
 
@@ -41,29 +37,26 @@ async function ensureOwnerOnFirstAccess(discordId: string, nome: string, avatarU
   return false;
 }
 
-export async function GET(req: NextRequest) {
-  const token = await getToken({ req });
-  if (!token?.discordId) {
+export async function GET() {
+  const sessao = await obterSessao();
+  if (!sessao) {
     return NextResponse.json({ erro: 'Nao autorizado' }, { status: 401 });
   }
 
   const db = getDb();
 
-  await ensureOwnerOnFirstAccess(
-    token.discordId as string,
-    (token.globalName as string) || (token.username as string) || 'Admin',
-    token.avatar
-      ? `https://cdn.discordapp.com/avatars/${token.discordId}/${token.avatar}.png`
-      : undefined
+  await garantirOwnerPrimeiroAcesso(
+    sessao.id,
+    sessao.nome,
+    sessao.avatar || undefined
   );
 
   const lista = await db.select().from(administradores).orderBy(administradores.adicionadoEm);
-
   return NextResponse.json(lista);
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isOwner(req))) {
+  if (!(await verificarOwner())) {
     return NextResponse.json({ erro: 'Apenas o owner pode adicionar admins' }, { status: 403 });
   }
 
@@ -95,7 +88,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isOwner(req))) {
+  if (!(await verificarOwner())) {
     return NextResponse.json({ erro: 'Apenas o owner pode remover admins' }, { status: 403 });
   }
 

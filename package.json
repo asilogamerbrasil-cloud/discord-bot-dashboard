@@ -11,9 +11,17 @@
     "db:generate": "npm run db:generate -w bot",
     "db:push": "npm run db:push -w bot"
   },
-  "workspaces": ["bot", "dashboard", "shared"],
+  "workspaces": [
+    "bot",
+    "dashboard",
+    "shared"
+  ],
   "devDependencies": {
     "concurrently": "^8.2.2",
     "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "jose": "^6.2.3",
+    "next-auth": "^4.24.14"
   }
 }

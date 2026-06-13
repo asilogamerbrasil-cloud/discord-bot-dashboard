@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/components/AuthProvider';
 import { Shield, Trash2, Crown, Plus } from 'lucide-react';
 
 interface Admin {
@@ -14,7 +14,7 @@ interface Admin {
 }
 
 export default function PaginaAdmins() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -85,7 +85,7 @@ export default function PaginaAdmins() {
   }
 
   const isOwner = admins.find(
-    (a) => a.discordId === (session?.user as { id?: string })?.id
+    (a) => a.discordId === user?.id
   )?.role === 'owner';
 
   if (carregando) {
