@@ -1,9 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { configuracaoGeral } from '@/lib/schema';
+import { configuracaoGeral, administradores } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { atualizarBotPerfil } from '@/lib/discord-api';
 import { z } from 'zod';
+import { getToken } from 'next-auth/jwt';
+import type { NextRequest } from 'next/server';
+
+async function verificarAdmin(req: NextRequest) {
+  const token = await getToken({ req });
+  if (!token?.discordId) return false;
+
+  const db = getDb();
+  const admins = await db
+    .select()
+    .from(administradores)
+    .where(eq(administradores.discordId, token.discordId as string))
+    .limit(1);
+
+  return admins.length > 0;
+}
 
 const schemaAtualizacao = z.object({
   nomeBot: z.string().min(2).max(32).optional(),
@@ -31,7 +47,11 @@ export async function GET() {
   }
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  if (!(await verificarAdmin(req))) {
+    return NextResponse.json({ erro: 'Acesso negado' }, { status: 403 });
+  }
+
   try {
     const body = await req.json();
     const dados = schemaAtualizacao.parse(body);

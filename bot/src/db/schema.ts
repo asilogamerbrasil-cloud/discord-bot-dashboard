@@ -40,3 +40,14 @@ export const sessaoUsuario = sqliteTable('sessao_usuario', {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const administradores = sqliteTable('administradores', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  discordId: text('discord_id').notNull().unique(),
+  nome: text('nome').notNull(),
+  avatarUrl: text('avatar_url'),
+  role: text('role', { enum: ['owner', 'admin'] }).notNull().default('admin'),
+  adicionadoEm: integer('adicionado_em', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

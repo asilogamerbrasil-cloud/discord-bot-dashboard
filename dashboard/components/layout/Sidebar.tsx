@@ -2,23 +2,30 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
 import { 
   LayoutDashboard, 
   Settings, 
   Server, 
   Activity,
-  Bot
+  Bot,
+  Shield,
+  LogOut
 } from 'lucide-react';
+import { useState } from 'react';
 
 const menus = [
   { label: 'Visao Geral', href: '/', icon: LayoutDashboard },
   { label: 'Servidores', href: '/servidores', icon: Server },
   { label: 'Configuracoes', href: '/configuracoes', icon: Settings },
+  { label: 'Administradores', href: '/admins', icon: Shield },
   { label: 'Logs', href: '/logs', icon: Activity },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const [menuAberto, setMenuAberto] = useState(false);
 
   return (
     <aside className="w-60 bg-[#2B2D31] border-r border-[#1E1F22] flex flex-col">
@@ -29,7 +36,7 @@ export function Sidebar() {
           </div>
           <div>
             <h2 className="font-bold text-white text-sm">Meu Bot</h2>
-            <p className="text-xs text-[#B5BAC1]">Online</p>
+            <p className="text-xs text-green-400">Online</p>
           </div>
         </div>
       </div>
@@ -56,13 +63,35 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-3 border-t border-[#1E1F22]">
-        <div className="flex items-center gap-2 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
+      <div className="border-t border-[#1E1F22]">
+        <button
+          onClick={() => setMenuAberto(!menuAberto)}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#313338] transition-colors text-left"
+        >
+          {session?.user?.image ? (
+            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center text-xs font-bold text-white">
+              {session?.user?.name?.[0] || '?'}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white truncate">{session?.user?.name}</p>
+            <p className="text-xs text-[#B5BAC1]">Admin</p>
           </div>
-          <span className="text-xs text-[#B5BAC1]">Bot Conectado</span>
-        </div>
+        </button>
+
+        {menuAberto && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );
