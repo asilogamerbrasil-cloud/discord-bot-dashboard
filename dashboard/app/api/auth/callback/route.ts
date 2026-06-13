@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { criarSessao } from '@/lib/auth';
 import type { NextRequest } from 'next/server';
 
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID!;
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET!;
-const REDIRECT_URI = `${process.env.NEXTAUTH_URL}/api/auth/callback`;
-
 export async function GET(req: NextRequest) {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+  const redirectUri = `${process.env.NEXTAUTH_URL}/api/auth/callback`;
+
   const code = req.nextUrl.searchParams.get('code');
 
   if (!code) {
@@ -18,11 +18,11 @@ export async function GET(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
+        client_id: clientId || '',
+        client_secret: clientSecret || '',
         grant_type: 'authorization_code',
         code,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: redirectUri,
       }),
     });
 
