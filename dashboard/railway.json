@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "nixpacks",
+    "config": {
+      "installCommand": "cd .. && npm install",
+      "buildCommand": "npm run build"
+    }
+  }
+}
