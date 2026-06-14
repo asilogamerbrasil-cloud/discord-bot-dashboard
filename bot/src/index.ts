@@ -24,7 +24,9 @@ const client = new Client({
 async function iniciar() {
   try {
     await client.login(process.env.DISCORD_TOKEN);
-    console.log('Bot conectado!');
+    console.log('[BOT] Discord conectado!');
+    console.log(`[BOT] Token: ${process.env.DISCORD_TOKEN ? '****configurado****' : 'AUSENTE'}`);
+    console.log(`[BOT] Guilds imediato: ${client.guilds.cache.size}`);
 
     const { registrarComandos } = await import('./comandos/index.js');
     await registrarComandos();
@@ -36,7 +38,6 @@ async function iniciar() {
     client.on('interactionCreate', eventoInteraction);
 
     const { iniciarAgendador } = await import('./servicos/agendador.js');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     iniciarAgendador(client as any);
 
     const readyClient = client as Client<true>;
@@ -44,7 +45,7 @@ async function iniciar() {
       await eventoReady(readyClient);
     }
   } catch (erro) {
-    console.error('Erro ao iniciar:', erro);
+    console.error('[BOT] ERRO FATAL ao iniciar:', erro);
   }
 }
 
