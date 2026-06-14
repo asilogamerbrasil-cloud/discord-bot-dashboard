@@ -12,6 +12,18 @@ async function verificarAdmin() {
   if (!sessao) return false;
 
   const db = getDb();
+  const todos = await db.select().from(administradores);
+
+  if (todos.length === 0) {
+    await db.insert(administradores).values({
+      discordId: sessao.id,
+      nome: sessao.nome,
+      avatarUrl: sessao.avatar,
+      role: 'owner',
+    });
+    return true;
+  }
+
   const admins = await db
     .select()
     .from(administradores)
