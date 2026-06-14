@@ -7,7 +7,7 @@ import {
   Globe, MessageSquare, Search, Zap,
   Users, Video, Eye, Send, Plus, Star,
   Server, Hash, Play, ShoppingBag, DollarSign, TrendingUp,
-  Activity, AlertTriangle, RefreshCw
+  Activity, AlertTriangle
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -114,9 +114,6 @@ function IntegracoesContent() {
   const [resultadoTeste, setResultadoTeste] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
   const [liveStatus, setLiveStatus] = useState<Record<string, { aoVivo: boolean; titulo?: string; url?: string; espectadores?: number; jogo?: string }>>({});
   const [statusGeral, setStatusGeral] = useState<StatusIntegracoes | null>(null);
-  const [carregandoStatus, setCarregandoStatus] = useState(true);
-  const [modoDeploy, setModoDeploy] = useState(false);
-  const [progressoDeploy, setProgressoDeploy] = useState(0);
 
   const carregarStatus = useCallback(async () => {
     try {
@@ -125,9 +122,7 @@ function IntegracoesContent() {
         const data = await r.json();
         setStatusGeral(data);
       }
-    } catch {} finally {
-      setCarregandoStatus(false);
-    }
+    } catch {}
   }, []);
 
   useEffect(() => { carregarIntegracoes(); carregarStatus(); }, []);
@@ -154,24 +149,6 @@ function IntegracoesContent() {
     }, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (!modoDeploy) { setProgressoDeploy(0); return; }
-    setProgressoDeploy(0);
-    const etapas = [10, 25, 40, 55, 70, 85, 95, 98, 100];
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < etapas.length) {
-        setProgressoDeploy(etapas[i]);
-        i++;
-      } else {
-        setProgressoDeploy(100);
-        clearInterval(interval);
-        setTimeout(() => { setModoDeploy(false); setProgressoDeploy(0); }, 2000);
-      }
-    }, 1200);
-    return () => clearInterval(interval);
-  }, [modoDeploy]);
 
   useEffect(() => {
     if (searchParams.get('sucesso')) { setStatusMsg({ tipo: 'sucesso', texto: 'Conectado!' }); carregarIntegracoes(); }
@@ -320,84 +297,56 @@ function IntegracoesContent() {
 
   function atualizarToggle(chave: string, valor: boolean) { atualizarMeta(chave, valor); }
 
+  async function exportarIntegracoes() {
+    const data = JSON.stringify(integracoes, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `integracoes-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importarIntegracoes(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) throw new Error('Formato invalido');
+      for (const item of data) {
+        await fetch('/api/integracoes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item),
+        });
+      }
+      await carregarIntegracoes();
+      setStatusMsg({ tipo: 'sucesso', texto: `${data.length} integracoes importadas!` });
+    } catch {
+      setStatusMsg({ tipo: 'erro', texto: 'Arquivo invalido' });
+    }
+    e.target.value = '';
+  }
+
   if (carregando) return <div className="space-y-6"><h1 className="text-2xl font-bold text-white">Integracoes</h1><div className="animate-pulse text-[#B5BAC1]">Carregando...</div></div>;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Integracoes</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold text-white">Integracoes</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={exportarIntegracoes} disabled={integracoes.length===0} className="text-xs bg-[#313338] hover:bg-[#3F4147] disabled:opacity-40 text-[#B5BAC1] px-3 py-1.5 rounded flex items-center gap-1 transition-colors">Exportar Backup</button>
+          <label className="text-xs bg-[#313338] hover:bg-[#3F4147] text-[#B5BAC1] px-3 py-1.5 rounded flex items-center gap-1 cursor-pointer transition-colors">Importar Backup
+            <input type="file" accept=".json" onChange={importarIntegracoes} className="hidden"/>
+          </label>
+        </div>
+      </div>
 
       {statusMsg && (
         <div className={`px-4 py-3 rounded-md text-sm flex items-center justify-between ${statusMsg.tipo==='sucesso'?'bg-green-500/10 border border-green-500/30 text-green-400':'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
           {statusMsg.texto} <button onClick={()=>setStatusMsg(null)} className="ml-2 hover:underline">X</button>
-        </div>
-      )}
-
-      {statusGeral && (
-        <div className="bg-[#1E1F22] border border-[#313338] rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${modoDeploy ? 'bg-yellow-400' : 'bg-green-400'}`}/>
-                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${modoDeploy ? 'bg-yellow-400' : 'bg-green-400'}`}/>
-                </span>
-                <span className="text-sm text-white font-medium">Servico: <span className={modoDeploy?'text-yellow-400':'text-green-400'}>{modoDeploy ? 'Em Deploy' : 'Online'}</span></span>
-                {modoDeploy && (
-                  <button onClick={() => setModoDeploy(false)} className="text-xs text-[#72767D] hover:text-white ml-1"><X className="w-3 h-3 inline"/> Cancelar</button>
-                )}
-              </div>
-              {!modoDeploy && (
-                <button onClick={() => setModoDeploy(true)} className="text-xs bg-[#313338] hover:bg-[#3F4147] text-[#B5BAC1] px-2 py-1 rounded flex items-center gap-1"><RefreshCw className="w-3 h-3"/>Simular Deploy</button>
-              )}
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-[#B5BAC1]">Redes Sociais:</span>
-                <span className="text-green-400">{statusGeral.redesSociais.online}</span>
-                <span className="text-[#72767D]">/</span>
-                <span className="text-white">{statusGeral.redesSociais.total}</span>
-                <span className="text-green-400 text-[10px]">online</span>
-                {statusGeral.redesSociais.error > 0 && <span className="text-red-400 text-[10px]">{statusGeral.redesSociais.error} erro(s)</span>}
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-[#B5BAC1]">Afiliados:</span>
-                <span className="text-green-400">{statusGeral.afiliados.online}</span>
-                <span className="text-[#72767D]">/</span>
-                <span className="text-white">{statusGeral.afiliados.total}</span>
-                <span className="text-green-400 text-[10px]">online</span>
-                {statusGeral.afiliados.error > 0 && <span className="text-red-400 text-[10px]">{statusGeral.afiliados.error} erro(s)</span>}
-              </div>
-              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                statusGeral.geral.status === 'tudo certo' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                statusGeral.geral.status === 'erro' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                statusGeral.geral.status === 'parcial' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                'bg-[#313338] text-[#B5BAC1] border border-[#3F4147]'
-              }`}>
-                {statusGeral.geral.status === 'tudo certo' && <Check className="w-3 h-3 inline mr-1"/>}
-                {statusGeral.geral.status === 'erro' && <AlertTriangle className="w-3 h-3 inline mr-1"/>}
-                {statusGeral.geral.status === 'tudo certo' ? 'Tudo Certo' : statusGeral.geral.status === 'erro' ? 'Erros Detectados' : statusGeral.geral.status === 'parcial' ? 'Parcial' : statusGeral.geral.status}
-              </div>
-            </div>
-            <button onClick={() => { carregarStatus(); carregarIntegracoes(); }} className="text-xs text-[#5865F2] hover:text-[#4752C4] flex items-center gap-1 flex-shrink-0"><RefreshCw className="w-3 h-3"/>Atualizar</button>
-          </div>
-          {modoDeploy && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-yellow-400 font-medium">Deploy em andamento...</span>
-                <span className="text-[#B5BAC1]">{progressoDeploy}%</span>
-              </div>
-              <div className="w-full bg-[#313338] rounded-full h-2 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-yellow-500 to-[#2ECC71] rounded-full transition-all duration-500" style={{width: `${progressoDeploy}%`}}/>
-              </div>
-              <p className="text-[10px] text-[#72767D]">
-                {progressoDeploy < 30 && 'Iniciando build...'}
-                {progressoDeploy >= 30 && progressoDeploy < 60 && 'Compilando TypeScript...'}
-                {progressoDeploy >= 60 && progressoDeploy < 85 && 'Construindo Next.js...'}
-                {progressoDeploy >= 85 && progressoDeploy < 100 && 'Finalizando deploy no Railway...'}
-                {progressoDeploy === 100 && 'Deploy concluido! Reiniciando servico...'}
-              </p>
-            </div>
-          )}
         </div>
       )}
 
