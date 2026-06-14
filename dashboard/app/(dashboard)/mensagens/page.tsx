@@ -153,7 +153,7 @@ export default function PaginaMensagens() {
     const preset = TIMER_PRESETS.find(t => t.label === timerHoras);
     if (preset && preset.valor > 0) return preset.valor;
     if (timerHoras === 'Personalizado' && timerPersonalizado) {
-      return parseInt(timerPersonalizado) * 3600 || 3600;
+      return parseInt(timerPersonalizado) * 60 || 60;
     }
     return 3600;
   }
@@ -378,11 +378,11 @@ export default function PaginaMensagens() {
                 </div>
                 {timerHoras === 'Personalizado' && (
                   <div className="mt-2 flex gap-2 items-center">
-                    <input type="number" min="1" max="72" value={timerPersonalizado}
+                    <input type="number" min="1" max="1440" value={timerPersonalizado}
                       onChange={e => setTimerPersonalizado(e.target.value)}
                       className="w-24 bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none"
-                      placeholder="Horas"/>
-                    <span className="text-xs text-[#72767D]">horas</span>
+                      placeholder="Minutos"/>
+                    <span className="text-xs text-[#72767D]">minutos</span>
                   </div>
                 )}
               </div>
