@@ -1,13 +1,54 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
 export default function PaginaInicial() {
+  const [servidores, setServidores] = useState(0);
+  const [usuarios, setUsuarios] = useState(0);
+  const [latencia, setLatencia] = useState(0);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    async function carregarDados() {
+      const inicio = Date.now();
+      try {
+        const res = await fetch('/api/servidores');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setServidores(data.length);
+          }
+        }
+      } catch {}
+
+      try {
+        const token = '1515429281126289638';
+        const gatewayRes = await fetch('https://discord.com/api/v10/gateway');
+        if (gatewayRes.ok) {
+          const ws = new WebSocket((await gatewayRes.json()).url);
+          ws.onopen = () => { setLatencia(Date.now() - inicio); ws.close(); };
+          ws.onerror = () => setLatencia(-1);
+        }
+      } catch { setLatencia(-1); }
+
+      setCarregando(false);
+    }
+    carregarDados();
+  }, []);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Visao Geral</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card titulo="Servidores" valor="0" />
-        <Card titulo="Usuarios" valor="0" />
-        <Card titulo="Latencia" valor="0ms" />
-      </div>
+
+      {carregando ? (
+        <div className="animate-pulse text-[#B5BAC1]">Carregando dados...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card titulo="Servidores" valor={String(servidores)} />
+          <Card titulo="Status Bot" valor={latencia > 0 ? 'Online' : latencia === -1 ? 'Offline' : '...'} />
+          <Card titulo="Latencia" valor={latencia > 0 ? `${latencia}ms` : '--'} />
+        </div>
+      )}
     </div>
   );
 }

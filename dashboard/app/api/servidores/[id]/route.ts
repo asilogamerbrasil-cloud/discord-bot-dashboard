@@ -7,13 +7,18 @@ async function discordFetch(endpoint: string, options: RequestInit = {}) {
   const token = process.env.DISCORD_TOKEN;
   if (!token) throw new Error('DISCORD_TOKEN nao configurado');
 
+  const headers: Record<string, string> = {
+    Authorization: `Bot ${token}`,
+    ...options.headers as Record<string, string> || {},
+  };
+
+  if (options.method !== 'DELETE') {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const res = await fetch(`${BASE}${endpoint}`, {
     ...options,
-    headers: {
-      Authorization: `Bot ${token}`,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {
