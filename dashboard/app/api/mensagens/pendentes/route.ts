@@ -29,6 +29,7 @@ function formatarMoeda(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}
 function emojiAleatorio() { const e = ['🔥','⚡','💥','🚀','🎮','💻','🖥️','🛒','💎','✨','🎯','💪','👾','🕹️']; return e[Math.floor(Math.random()*e.length)]; }
 
 async function buscarProdutosShopee(keyword: string, appId: string, appSecret: string, orderBy: string, pageSize = 3): Promise<ShopeeProduct[]> {
+  console.log(`[Shopee API] Buscando: "${keyword}" ordem=${orderBy} qtd=${pageSize}`);
   const query = `
     query Search($keyword: String!, $pageSize: Int, $orderBy: String) {
       searchProduct(keyword: $keyword, pageSize: $pageSize, orderBy: $orderBy) {
@@ -40,10 +41,13 @@ async function buscarProdutosShopee(keyword: string, appId: string, appSecret: s
     method: 'POST', headers: { 'Content-Type': 'application/json', 'App-Id': appId, 'App-Secret': appSecret },
     body: JSON.stringify({ query, variables: { keyword, pageSize } }),
   });
-  if (!res.ok) return [];
+  console.log(`[Shopee API] Busca status=${res.status}`);
+  if (!res.ok) { console.log('[Shopee API] Erro HTTP:', res.status); return []; }
   const json = await res.json();
-  if (json.errors) return [];
-  return (json.data?.searchProduct?.data?.products || []) as ShopeeProduct[];
+  if (json.errors) { console.log('[Shopee API] Erro GraphQL:', JSON.stringify(json.errors).substring(0, 300)); return []; }
+  const produtos = (json.data?.searchProduct?.data?.products || []) as ShopeeProduct[];
+  console.log(`[Shopee API] Resultados: ${produtos.length} produtos encontrados`);
+  return produtos;
 }
 
 async function gerarLinkAfiliado(productId: string, appId: string, appSecret: string): Promise<string> {
@@ -159,12 +163,17 @@ export async function GET(req: NextRequest) {
 
       if (m.tipo === 'shopee_preset') {
         const shopeeInt = await db.select().from(integracoes).where(and(eq(integracoes.plataforma, 'shopee'), eq(integracoes.ativo, true))).limit(1);
-        if (shopeeInt.length === 0 || !shopeeInt[0].accessToken || !shopeeInt[0].contaId) return null;
+        if (shopeeInt.length === 0) { console.log('[Pendentes] Shopee nao conectada'); return null; }
+        if (!shopeeInt[0].accessToken || !shopeeInt[0].contaId) { console.log('[Pendentes] Shopee sem token/id'); return null; }
+
+        console.log(`[Pendentes] Shopee conectada: AppId=${shopeeInt[0].contaId}`);
 
         let shopeeConfig: { modoRotacao?: string; presetsSelecionados?: string[]; ultimaKey?: string; qtdProdutos?: number; ordenacao?: string; cta?: string } | null = null;
         try { if (m.shopeeConfig) shopeeConfig = JSON.parse(m.shopeeConfig); } catch {}
 
         const presetAtual = selecionarPresetRotacao(shopeeConfig, m.shopeePreset || 'achadinhos_dia');
+        console.log(`[Pendentes] Mensagem ${m.id} - preset: ${presetAtual}, ordem: ${shopeeConfig?.ordenacao || 'default'}, qtd: ${shopeeConfig?.qtdProdutos || 4}`);
+
         const resultado = await montarMensagemShopee(presetAtual, shopeeInt[0].contaId!, shopeeInt[0].accessToken!, {
           qtdProdutos: shopeeConfig?.qtdProdutos || 4,
           ordenacao: shopeeConfig?.ordenacao,
