@@ -16,13 +16,17 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { plataforma, nomeConta, avatarUrl, contaId, accessToken, refreshToken, tokenExpira } = await req.json();
+    const body = await req.json();
+    const { plataforma, nomeConta, avatarUrl, contaId, accessToken, refreshToken, tokenExpira } = body;
+
+    console.log('[Integracoes POST] Salvando:', { plataforma, nomeConta, contaId, hasToken: !!accessToken });
 
     if (!plataforma) {
       return NextResponse.json({ erro: 'Plataforma obrigatoria' }, { status: 400 });
     }
 
     const db = getDb();
+    console.log('[Integracoes POST] DB path:', process.env.DATABASE_URL);
 
     const existente = await db
       .select()
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (existente.length > 0) {
+      console.log('[Integracoes POST] Atualizando existente:', existente[0].id);
       await db
         .update(integracoes)
         .set({
