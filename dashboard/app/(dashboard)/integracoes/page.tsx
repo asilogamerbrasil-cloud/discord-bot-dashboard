@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { 
   Youtube, Twitch, Music2, Camera, 
   Plug, Check, Trash2, Settings, X, 
-  Globe, Bell, MessageSquare, ExternalLink
+  Globe, Bell, MessageSquare
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 interface Integracao {
   id: number;
@@ -66,14 +68,34 @@ const PLATAFORMAS = [
   },
 ];
 
-export default function PaginaIntegracoes() {
+function IntegracoesContent() {
+  const searchParams = useSearchParams();
   const [integracoes, setIntegracoes] = useState<Integracao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [editando, setEditando] = useState<Integracao | null>(null);
+  const [statusMsg, setStatusMsg] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   useEffect(() => {
     carregarIntegracoes();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('sucesso')) {
+      setStatusMsg({ tipo: 'sucesso', texto: 'Conectado com sucesso!' });
+      carregarIntegracoes();
+    }
+    if (searchParams.get('erro')) {
+      const msg: Record<string, string> = {
+        token: 'Erro na autenticacao. Tente novamente.',
+        user: 'Erro ao obter dados da conta.',
+        save: 'Erro ao salvar conexao.',
+        config: 'Credenciais da plataforma nao configuradas.',
+        parametros: 'Parametros invalidos.',
+        desconhecido: 'Erro desconhecido.',
+      };
+      setStatusMsg({ tipo: 'erro', texto: msg[searchParams.get('erro') || ''] || 'Erro na conexao' });
+    }
+  }, [searchParams]);
 
   async function carregarIntegracoes() {
     try {
@@ -89,26 +111,12 @@ export default function PaginaIntegracoes() {
 
   async function conectar(plataforma: string) {
     if (plataforma === 'youtube') {
-      window.location.href = `/api/oauth/login?plataforma=youtube`;
+      window.location.href = '/api/oauth/login?plataforma=youtube';
       return;
     }
 
     if (plataforma === 'twitch') {
-      try {
-        const res = await fetch('/api/integracoes', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plataforma: 'twitch' }),
-        });
-        if (res.ok) {
-          await carregarIntegracoes();
-        } else {
-          const data = await res.json();
-          alert(data.erro || 'Erro ao conectar Twitch');
-        }
-      } catch (e) {
-        alert('Erro ao conectar');
-      }
+      window.location.href = '/api/oauth/login?plataforma=twitch';
       return;
     }
 
@@ -181,6 +189,19 @@ export default function PaginaIntegracoes() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Integracoes</h1>
 
+      {statusMsg && (
+        <div
+          className={`px-4 py-3 rounded-md text-sm ${
+            statusMsg.tipo === 'sucesso'
+              ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+              : 'bg-red-500/10 border border-red-500/30 text-red-400'
+          }`}
+        >
+          {statusMsg.texto}
+          <button onClick={() => setStatusMsg(null)} className="ml-2 hover:underline">X</button>
+        </div>
+      )}
+
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-2 mb-4">
@@ -199,14 +220,15 @@ export default function PaginaIntegracoes() {
                   key={plat.id}
                   className={`bg-[#2B2D31] border rounded-lg p-5 transition-colors ${
                     conectado
-                      ? `border-[${plat.cor}]/50 ${plat.bgCor}`
-                      : `border-[#1E1F22] ${plat.hoverCor}`
+                      ? 'border-l-4 shadow-lg'
+                      : 'border-[#1E1F22] hover:border-[#3F4147]'
                   }`}
+                  style={conectado ? { borderLeftColor: plat.cor } : {}}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: `${plat.cor}20` }}
                       >
                         <Icon className="w-6 h-6" style={{ color: plat.cor }} />
@@ -218,7 +240,7 @@ export default function PaginaIntegracoes() {
                     </div>
 
                     {conectado && (
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                         <input
                           type="checkbox"
                           checked={integracao.ativo}
@@ -231,36 +253,40 @@ export default function PaginaIntegracoes() {
                   </div>
 
                   {conectado ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 bg-[#1E1F22] rounded-lg p-3">
                         {integracao.avatarUrl ? (
-                          <img src={integracao.avatarUrl} alt="" className="w-6 h-6 rounded-full" />
+                          <img src={integracao.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
                         ) : (
                           <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
                             style={{ backgroundColor: plat.cor }}
                           >
-                            {integracao.nomeConta?.[0]?.toUpperCase() || '?'}
+                            {(integracao.nomeConta || plat.nome)[0]?.toUpperCase()}
                           </div>
                         )}
-                        <span className="text-sm text-white">{integracao.nomeConta || 'Conectado'}</span>
-                        <span className="flex items-center gap-1 text-xs text-green-400 ml-1">
-                          <Check className="w-3 h-3" />
-                          Conectado
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium text-sm truncate">
+                            {integracao.nomeConta || 'Conectado'}
+                          </p>
+                          <p className="text-xs text-green-400 flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Conectado
+                          </p>
+                        </div>
                       </div>
 
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditando(integracao)}
-                          className="flex items-center gap-1 text-xs text-[#B5BAC1] hover:text-white bg-[#1E1F22] hover:bg-[#313338] px-2 py-1 rounded transition-colors"
+                          className="flex items-center gap-1 text-xs text-[#B5BAC1] hover:text-white bg-[#1E1F22] hover:bg-[#313338] px-3 py-1.5 rounded transition-colors"
                         >
                           <Settings className="w-3 h-3" />
                           Configurar
                         </button>
                         <button
                           onClick={() => desconectar(integracao.id)}
-                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded transition-colors"
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
                           Desconectar
@@ -310,7 +336,7 @@ export default function PaginaIntegracoes() {
                   className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none"
                 />
                 <p className="text-xs text-[#72767D] mt-1">
-                  Crie um webhook no canal do Discord onde quer receber as notificacoes
+                  Crie um webhook no canal onde quer receber notificacoes
                 </p>
               </div>
 
@@ -326,33 +352,26 @@ export default function PaginaIntegracoes() {
                   className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none resize-none font-mono"
                 />
                 <div className="text-xs text-[#72767D] mt-2 space-y-0.5">
-                  <p>Variaveis disponiveis:</p>
-                  <p><code className="bg-[#1E1F22] px-1 rounded">{'{plataforma}'}</code> - Nome da plataforma</p>
-                  <p><code className="bg-[#1E1F22] px-1 rounded">{'{titulo}'}</code> - Titulo do conteudo</p>
-                  <p><code className="bg-[#1E1F22] px-1 rounded">{'{url}'}</code> - Link do conteudo</p>
-                  <p><code className="bg-[#1E1F22] px-1 rounded">{'{autor}'}</code> - Nome do canal/criador</p>
+                  <p>Variaveis: <code className="bg-[#1E1F22] px-1 rounded">{'{plataforma}'}</code> <code className="bg-[#1E1F22] px-1 rounded">{'{titulo}'}</code> <code className="bg-[#1E1F22] px-1 rounded">{'{url}'}</code> <code className="bg-[#1E1F22] px-1 rounded">{'{autor}'}</code></p>
                 </div>
               </div>
 
               <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  className="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Salvar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditando(null)}
-                  className="text-[#B5BAC1] hover:text-white px-4 py-2 rounded-md text-sm transition-colors"
-                >
-                  Cancelar
-                </button>
+                <button type="submit" className="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Salvar</button>
+                <button type="button" onClick={() => setEditando(null)} className="text-[#B5BAC1] hover:text-white px-4 py-2 rounded-md text-sm transition-colors">Cancelar</button>
               </div>
             </form>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaginaIntegracoes() {
+  return (
+    <Suspense fallback={<div className="animate-pulse text-[#B5BAC1]">Carregando...</div>}>
+      <IntegracoesContent />
+    </Suspense>
   );
 }

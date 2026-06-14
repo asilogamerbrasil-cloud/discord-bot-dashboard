@@ -11,17 +11,17 @@ const OAUTH_CONFIG: Record<string, {
 }> = {
   youtube: {
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    userInfoUrl: 'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
+    userInfoUrl: 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true',
     clientIdEnv: 'YOUTUBE_CLIENT_ID',
     clientSecretEnv: 'YOUTUBE_CLIENT_SECRET',
     platformName: 'youtube',
     mapUser: (data: unknown) => {
-      const d = data as { items?: [{ id: string; snippet: { title: string; thumbnails: { default: { url: string } } } }] };
+      const d = data as { items?: [{ id: string; snippet: { title: string; thumbnails: { default: { url: string }; medium: { url: string }; high: { url: string } }; customUrl?: string }; statistics: { subscriberCount: string; videoCount: string; viewCount: string } }] };
       const channel = d?.items?.[0];
       return {
         contaId: channel?.id || '',
         nomeConta: channel?.snippet?.title || 'Canal YouTube',
-        avatarUrl: channel?.snippet?.thumbnails?.default?.url || '',
+        avatarUrl: channel?.snippet?.thumbnails?.high?.url || channel?.snippet?.thumbnails?.medium?.url || channel?.snippet?.thumbnails?.default?.url || '',
       };
     },
   },
