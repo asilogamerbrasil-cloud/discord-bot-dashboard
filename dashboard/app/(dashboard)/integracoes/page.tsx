@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Youtube, Twitch, Music2, Camera, 
   Plug, Check, Trash2, Settings, X, 
-  Globe, Bell, MessageSquare, Search,
-  Users, Video, Eye, Zap
+  Globe, MessageSquare, Search, Zap,
+  Users, Video, Eye, Send, Plus, Star,
+  Server, Hash, Play
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -23,11 +24,39 @@ interface Integracao {
   metadata: string | null;
 }
 
+interface Preset {
+  nome: string;
+  template: string;
+}
+
+interface ServidorInfo { id: string; nome: string; icone: string | null; }
+interface CanalInfo { id: string; nome: string; }
+
+const PRESETS_PADRAO: Record<string, Preset[]> = {
+  youtube: [
+    { nome: '🎬 Video Novo', template: '🔥 **VIDEO NOVO NO CANAL!** 🔥\n\n📺 **{titulo}**\n🔗 {url}\n\n👊 Deixa o like, comenta e compartilha!\n📢 {autor}' },
+    { nome: '📱 Shorts', template: '⚡ **SHORT NOVO!** ⚡\n\n📱 **{titulo}**\n🔗 {url}\n\n💬 O que achou? Comenta ai!\n📢 {autor}' },
+    { nome: '🔴 Ao Vivo', template: '🔴 **ESTAMOS AO VIVO!** 🔴\n\n🎮 **{titulo}**\n🔗 {url}\n\n👋 Cola com a gente! Nao vai perder ne?\n📢 {autor}' },
+  ],
+  twitch: [
+    { nome: '🎮 Live On', template: '🟣 **LIVE ON!** 🟣\n\n🎮 **{titulo}**\n🎯 Jogando: **{jogo}**\n🔗 {url}\n\n👋 Bora la trocar ideia com a galera!\n📢 {autor}' },
+    { nome: '💜 Stream', template: '💜 **STREAM INICIANDO!** 💜\n\n📺 **{titulo}**\n🎯 **{jogo}**\n🔗 {url}\n\n🔥 Vem com a gente! Ta demais!\n📢 {autor}' },
+  ],
+  tiktok: [
+    { nome: '🎵 TikTok', template: '🎵 **NOVO VIDEO NO TIKTOK!** 🎵\n\n📱 **{titulo}**\n🔗 {url}\n\n❤️ Curte e compartilha com a rapaziada!\n📢 {autor}' },
+    { nome: '🔥 Viral', template: '🔥 **SAIU MAIS UM!** 🔥\n\n📱 **{titulo}**\n🔗 {url}\n\n⚡ Confere la e me diz o que achou!\n📢 {autor}' },
+  ],
+  instagram: [
+    { nome: '📸 Post Novo', template: '📸 **NOVO POST NO INSTA!** 📸\n\n✨ **{titulo}**\n🔗 {url}\n\n❤️ Deixa o like la e compartilha!\n📢 {autor}' },
+    { nome: '📖 Stories', template: '📖 **NOVOS STORIES!** 📖\n\n👀 Corre pra ver antes que suma!\n🔗 {url}\n\n📢 {autor}' },
+  ],
+};
+
 const PLATAFORMAS = [
-  { id: 'youtube' as const, nome: 'YouTube', icone: Youtube, cor: '#FF0000', descricao: 'Notifique sobre novos videos, shorts e lives' },
-  { id: 'twitch' as const, nome: 'Twitch', icone: Twitch, cor: '#9146FF', descricao: 'Avise quando suas lives comecarem' },
-  { id: 'tiktok' as const, nome: 'TikTok', icone: Music2, cor: '#FF0050', descricao: 'Compartilhe novos videos automaticamente' },
-  { id: 'instagram' as const, nome: 'Instagram', icone: Camera, cor: '#E4405F', descricao: 'Postagens, stories e reels' },
+  { id: 'youtube' as const, nome: 'YouTube', icone: Youtube, cor: '#FF0000', descricao: 'Videos, shorts e lives' },
+  { id: 'twitch' as const, nome: 'Twitch', icone: Twitch, cor: '#9146FF', descricao: 'Lives e streams' },
+  { id: 'tiktok' as const, nome: 'TikTok', icone: Music2, cor: '#FF0050', descricao: 'Videos curtos' },
+  { id: 'instagram' as const, nome: 'Instagram', icone: Camera, cor: '#E4405F', descricao: 'Posts, stories e reels' },
 ];
 
 function IntegracoesContent() {
@@ -40,236 +69,196 @@ function IntegracoesContent() {
   const [campoUsername, setCampoUsername] = useState('');
   const [conectando, setConectando] = useState(false);
 
+  // Config tabs
+  const [abaConfig, setAbaConfig] = useState<'conteudo' | 'teste'>('conteudo');
+
+  // Presets
+  const [novoPresetNome, setNovoPresetNome] = useState('');
+  const [novoPresetTemplate, setNovoPresetTemplate] = useState('');
+  const [mostrarAddPreset, setMostrarAddPreset] = useState(false);
+
+  // Teste
+  const [servidores, setServidores] = useState<ServidorInfo[]>([]);
+  const [canais, setCanais] = useState<CanalInfo[]>([]);
+  const [servidorTeste, setServidorTeste] = useState('');
+  const [canalTeste, setCanalTeste] = useState('');
+  const [enviandoTeste, setEnviandoTeste] = useState(false);
+  const [resultadoTeste, setResultadoTeste] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
   useEffect(() => { carregarIntegracoes(); }, []);
 
   useEffect(() => {
-    if (searchParams.get('sucesso')) {
-      setStatusMsg({ tipo: 'sucesso', texto: 'Conectado com sucesso!' });
-      carregarIntegracoes();
-    }
+    if (searchParams.get('sucesso')) { setStatusMsg({ tipo: 'sucesso', texto: 'Conectado!' }); carregarIntegracoes(); }
     if (searchParams.get('erro')) {
-      const msgs: Record<string, string> = {
-        token: 'Erro na autenticacao. Tente novamente.',
-        user: 'Erro ao obter dados da conta.',
-        save: 'Erro ao salvar conexao.',
-        config: 'Credenciais nao configuradas.',
-        parametros: 'Parametros invalidos.',
-        desconhecido: 'Erro desconhecido.',
-      };
-      setStatusMsg({ tipo: 'erro', texto: msgs[searchParams.get('erro') || ''] || 'Erro' });
+      const msgs: Record<string, string> = { token:'Erro auth', user:'Erro dados', save:'Erro salvar', config:'Credenciais faltando', desconhecido:'Erro' };
+      setStatusMsg({ tipo: 'erro', texto: msgs[searchParams.get('erro')||'']||'Erro' });
     }
   }, [searchParams]);
 
   async function carregarIntegracoes() {
-    try {
-      const res = await fetch('/api/integracoes');
-      if (res.ok) setIntegracoes(await res.json());
-    } catch (e) { console.error(e); }
-    finally { setCarregando(false); }
+    try { const r = await fetch('/api/integracoes'); if (r.ok) setIntegracoes(await r.json()); }
+    catch(e){} finally { setCarregando(false); }
   }
 
-  function obterIntegracao(plataforma: string) {
-    return integracoes.find((i) => i.plataforma === plataforma);
-  }
+  function obterIntegracao(p: string) { return integracoes.find(i => i.plataforma === p); }
 
   async function conectar(plataforma: string) {
-    if (plataforma === 'youtube' || plataforma === 'twitch') {
-      window.location.href = `/api/oauth/login?plataforma=${plataforma}`;
-      return;
-    }
-    setModalConectar(plataforma);
-    setCampoUsername('');
+    if (plataforma === 'youtube' || plataforma === 'twitch') { window.location.href = `/api/oauth/login?plataforma=${plataforma}`; return; }
+    setModalConectar(plataforma); setCampoUsername('');
   }
 
   async function confirmarConexaoManual() {
     if (!modalConectar || !campoUsername.trim()) return;
     setConectando(true);
-
     try {
-      const res = await fetch('/api/integracoes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plataforma: modalConectar, nomeConta: campoUsername.trim() }),
-      });
-      if (res.ok) {
-        await carregarIntegracoes();
-        setModalConectar(null);
-        setStatusMsg({ tipo: 'sucesso', texto: `${modalConectar} conectado!` });
-      } else {
-        const data = await res.json();
-        setStatusMsg({ tipo: 'erro', texto: data.erro || 'Erro' });
-      }
-    } catch (e) {
-      setStatusMsg({ tipo: 'erro', texto: 'Erro ao conectar' });
-    } finally {
-      setConectando(false);
-    }
+      const r = await fetch('/api/integracoes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ plataforma: modalConectar, nomeConta: campoUsername.trim() }) });
+      if (r.ok) { await carregarIntegracoes(); setModalConectar(null); }
+      else { const d = await r.json(); setStatusMsg({ tipo:'erro', texto: d.erro||'Erro' }); }
+    } catch { setStatusMsg({ tipo:'erro', texto: 'Erro' }); }
+    finally { setConectando(false); }
   }
 
   async function desconectar(id: number) {
-    if (!confirm('Remover esta integracao?')) return;
-    try {
-      const res = await fetch(`/api/integracoes?id=${id}`, { method: 'DELETE' });
-      if (res.ok) { setEditando(null); await carregarIntegracoes(); }
-    } catch (e) { console.error(e); }
+    if (!confirm('Remover?')) return;
+    await fetch(`/api/integracoes?id=${id}`, { method:'DELETE' });
+    setEditando(null); await carregarIntegracoes();
   }
 
-  async function toggleAtivo(integracao: Integracao) {
+  async function toggleAtivo(i: Integracao) {
+    await fetch('/api/integracoes', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id: i.id, ativo: !i.ativo }) });
+    await carregarIntegracoes();
+  }
+
+  function abrirConfig(integracao: Integracao) {
+    setEditando(integracao);
+    setAbaConfig('conteudo');
+    setMostrarAddPreset(false);
+    setResultadoTeste(null);
+    setServidorTeste(''); setCanalTeste(''); setServidores([]); setCanais([]);
+  }
+
+  function getMeta() { if (!editando || !editando.metadata) return {}; try { return JSON.parse(editando.metadata); } catch { return {}; } }
+  function getPresets(): Preset[] { const m = getMeta(); return m.presets || PRESETS_PADRAO[editando?.plataforma || ''] || []; }
+  function getPresetSelecionado(): string { const m = getMeta(); return m.presetSelecionado || getPresets()[0]?.nome || ''; }
+
+  function atualizarMeta(chave: string, valor: unknown) {
+    if (!editando) return;
+    const meta = getMeta();
+    meta[chave] = valor;
+    setEditando({ ...editando, metadata: JSON.stringify(meta) });
+  }
+
+  function selecionarPreset(nome: string) { atualizarMeta('presetSelecionado', nome); }
+
+  function adicionarPreset() {
+    if (!novoPresetNome.trim() || !novoPresetTemplate.trim()) return;
+    const presets = [...getPresets(), { nome: novoPresetNome.trim(), template: novoPresetTemplate.trim() }];
+    atualizarMeta('presets', presets);
+    atualizarMeta('presetSelecionado', novoPresetNome.trim());
+    setNovoPresetNome(''); setNovoPresetTemplate(''); setMostrarAddPreset(false);
+  }
+
+  function removerPreset(nome: string) {
+    const presets = getPresets().filter(p => p.nome !== nome);
+    atualizarMeta('presets', presets);
+    if (getPresetSelecionado() === nome && presets.length > 0) atualizarMeta('presetSelecionado', presets[0].nome);
+  }
+
+  async function carregarServidores() {
+    try { const r = await fetch('/api/servidores'); if (r.ok) setServidores(await r.json()); } catch {}
+  }
+
+  async function carregarCanais(serverId: string) {
+    setServidorTeste(serverId); setCanalTeste(''); setCanais([]);
+    if (!serverId) return;
+    try { const r = await fetch(`/api/servidores/${serverId}/canais`); if (r.ok) setCanais(await r.json()); } catch {}
+  }
+
+  async function enviarTeste() {
+    if (!canalTeste) return;
+    const preset = getPresets().find(p => p.nome === getPresetSelecionado());
+    const template = preset?.template || editando?.mensagemTemplate || 'Teste {plataforma}';
+    
+    const msg = template
+      .replace(/{titulo}/g, '🎯 Titulo de Exemplo')
+      .replace(/{url}/g, 'https://exemplo.com/conteudo')
+      .replace(/{autor}/g, editando?.nomeConta || 'Canal')
+      .replace(/{jogo}/g, '🎮 Jogo Exemplo')
+      .replace(/{plataforma}/g, editando?.plataforma || 'Plataforma');
+
+    setEnviandoTeste(true); setResultadoTeste(null);
     try {
-      const res = await fetch('/api/integracoes', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: integracao.id, ativo: !integracao.ativo }),
+      const r = await fetch('/api/integracoes/teste', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canalId: canalTeste, mensagem: msg }),
       });
-      if (res.ok) await carregarIntegracoes();
-    } catch (e) { console.error(e); }
+      if (r.ok) setResultadoTeste({ tipo: 'sucesso', texto: 'Mensagem de teste enviada!' });
+      else { const d = await r.json(); setResultadoTeste({ tipo: 'erro', texto: d.erro || 'Erro' }); }
+    } catch { setResultadoTeste({ tipo: 'erro', texto: 'Erro ao enviar' }); }
+    finally { setEnviandoTeste(false); }
   }
 
   async function salvarConfig(e: React.FormEvent) {
     e.preventDefault();
     if (!editando) return;
-
     try {
-      const body: Record<string, unknown> = { id: editando.id };
-
-      if (editando.plataforma === 'youtube' || editando.plataforma === 'twitch') {
-        const meta = editando.metadata ? JSON.parse(editando.metadata) : {};
-        body.metadata = JSON.stringify(meta);
-      }
-      
-      if (editando.plataforma === 'tiktok' || editando.plataforma === 'instagram') {
-        body.webhookUrl = editando.webhookUrl;
-      }
-      
-      body.mensagemTemplate = editando.mensagemTemplate;
-
-      const res = await fetch('/api/integracoes', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        await carregarIntegracoes();
-        setEditando(null);
-      }
-    } catch (e) { console.error(e); }
+      const body: Record<string, unknown> = { id: editando.id, metadata: editando.metadata, mensagemTemplate: editando.mensagemTemplate };
+      if (editando.plataforma === 'tiktok' || editando.plataforma === 'instagram') body.webhookUrl = editando.webhookUrl;
+      await fetch('/api/integracoes', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      await carregarIntegracoes();
+      setEditando(null);
+    } catch {}
   }
 
-  function atualizarMetadata(chave: string, valor: boolean) {
-    if (!editando) return;
-    const meta = editando.metadata ? JSON.parse(editando.metadata) : {};
-    meta[chave] = valor;
-    setEditando({ ...editando, metadata: JSON.stringify(meta) });
-  }
+  function atualizarToggle(chave: string, valor: boolean) { atualizarMeta(chave, valor); }
 
-  if (carregando) {
-    return <div className="space-y-6"><h1 className="text-2xl font-bold text-white">Integracoes</h1><div className="animate-pulse text-[#B5BAC1]">Carregando...</div></div>;
-  }
+  if (carregando) return <div className="space-y-6"><h1 className="text-2xl font-bold text-white">Integracoes</h1><div className="animate-pulse text-[#B5BAC1]">Carregando...</div></div>;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Integracoes</h1>
 
       {statusMsg && (
-        <div className={`px-4 py-3 rounded-md text-sm flex items-center justify-between ${statusMsg.tipo === 'sucesso' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
-          {statusMsg.texto}
-          <button onClick={() => setStatusMsg(null)} className="ml-2 hover:underline">X</button>
+        <div className={`px-4 py-3 rounded-md text-sm flex items-center justify-between ${statusMsg.tipo==='sucesso'?'bg-green-500/10 border border-green-500/30 text-green-400':'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+          {statusMsg.texto} <button onClick={()=>setStatusMsg(null)} className="ml-2 hover:underline">X</button>
         </div>
       )}
 
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Globe className="w-5 h-5 text-[#5865F2]" />
-          <h2 className="text-lg font-semibold text-white">Redes Sociais</h2>
-        </div>
-
+        <div className="flex items-center gap-2 mb-4"><Globe className="w-5 h-5 text-[#5865F2]" /><h2 className="text-lg font-semibold text-white">Redes Sociais</h2></div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {PLATAFORMAS.map((plat) => {
-            const integracao = obterIntegracao(plat.id);
-            const Icon = plat.icone;
-            const conectado = !!integracao;
-            let meta: Record<string, unknown> = {};
-            if (integracao?.metadata) {
-              try { meta = JSON.parse(integracao.metadata); } catch {}
-            }
-
+          {PLATAFORMAS.map(plat => {
+            const integracao = obterIntegracao(plat.id); const Icon = plat.icone; const conectado = !!integracao;
+            let meta: Record<string,unknown> = {}; if (integracao?.metadata) try { meta=JSON.parse(integracao.metadata); } catch {}
             return (
-              <div key={plat.id} className={`bg-[#2B2D31] border rounded-lg p-5 transition-colors ${conectado ? 'border-l-4 shadow-lg' : 'border-[#1E1F22] hover:border-[#3F4147]'}`}
-                style={conectado ? { borderLeftColor: plat.cor } : {}}>
-                
+              <div key={plat.id} className={`bg-[#2B2D31] border rounded-lg p-5 transition-colors ${conectado?'border-l-4 shadow-lg':'border-[#1E1F22] hover:border-[#3F4147]'}`} style={conectado?{borderLeftColor:plat.cor}:{}}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${plat.cor}20` }}>
-                      <Icon className="w-6 h-6" style={{ color: plat.cor }} />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-semibold">{plat.nome}</h3>
-                      <p className="text-xs text-[#B5BAC1]">{plat.descricao}</p>
-                    </div>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{backgroundColor:`${plat.cor}20`}}><Icon className="w-6 h-6" style={{color:plat.cor}}/></div>
+                    <div><h3 className="text-white font-semibold">{plat.nome}</h3><p className="text-xs text-[#B5BAC1]">{plat.descricao}</p></div>
                   </div>
-                  {conectado && (
-                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                      <input type="checkbox" checked={integracao.ativo} onChange={() => toggleAtivo(integracao)} className="sr-only peer" />
-                      <div className="w-9 h-5 bg-[#3F4147] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5865F2]"></div>
-                    </label>
-                  )}
+                  {conectado && <label className="relative inline-flex items-center cursor-pointer flex-shrink-0"><input type="checkbox" checked={integracao.ativo} onChange={()=>toggleAtivo(integracao)} className="sr-only peer"/><div className="w-9 h-5 bg-[#3F4147] rounded-full peer-checked:bg-[#5865F2] relative"><div className={`absolute top-[2px] w-4 h-4 rounded-full bg-white transition-all ${integracao.ativo?'left-[18px]':'left-[2px]'}`}/></div></label>}
                 </div>
-
                 {conectado ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 bg-[#1E1F22] rounded-lg p-3">
-                      {integracao.avatarUrl ? (
-                        <img src={integracao.avatarUrl} alt="" className="w-10 h-10 rounded-full" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: plat.cor }}>
-                          {(integracao.nomeConta || plat.nome)[0]?.toUpperCase()}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium text-sm truncate">{integracao.nomeConta || 'Conectado'}</p>
-                        <p className="text-xs text-green-400 flex items-center gap-1"><Check className="w-3 h-3" />Conectado</p>
-                      </div>
+                      {integracao.avatarUrl ? <img src={integracao.avatarUrl} className="w-10 h-10 rounded-full"/> : <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{backgroundColor:plat.cor}}>{(integracao.nomeConta||plat.nome)[0]?.toUpperCase()}</div>}
+                      <div className="flex-1 min-w-0"><p className="text-white font-medium text-sm truncate">{integracao.nomeConta||'Conectado'}</p><p className="text-xs text-green-400 flex items-center gap-1"><Check className="w-3 h-3"/>Conectado</p></div>
                     </div>
-
-                    {Object.keys(meta).length > 0 && (
+                    {Object.keys(meta).filter(k=>['inscritos','seguidores','videos','visualizacoes'].includes(k)).length>0 && (
                       <div className="grid grid-cols-2 gap-2 text-xs">
-                        {(meta.inscritos !== undefined || meta.seguidores !== undefined) && (
-                          <div className="col-span-2 bg-[#1E1F22] rounded p-2 text-center">
-                            <p className="text-[#72767D]">{meta.inscritos !== undefined ? 'Inscritos' : 'Seguidores'}</p>
-                            <p className="text-white font-bold flex items-center justify-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {((meta.inscritos as number) || (meta.seguidores as number) || 0).toLocaleString()}
-                            </p>
-                          </div>
-                        )}
-                        {meta.videos !== undefined && (
-                          <div className="bg-[#1E1F22] rounded p-2 text-center">
-                            <p className="text-[#72767D]">Videos</p>
-                            <p className="text-white font-bold flex items-center justify-center gap-1"><Video className="w-3 h-3" />{(meta.videos as number).toLocaleString()}</p>
-                          </div>
-                        )}
-                        {meta.visualizacoes !== undefined && (
-                          <div className="bg-[#1E1F22] rounded p-2 text-center">
-                            <p className="text-[#72767D]">Views</p>
-                            <p className="text-white font-bold flex items-center justify-center gap-1"><Eye className="w-3 h-3" />{(meta.visualizacoes as number).toLocaleString()}</p>
-                          </div>
-                        )}
+                        {(meta.inscritos!==undefined||meta.seguidores!==undefined) && <div className="col-span-2 bg-[#1E1F22] rounded p-2 text-center"><p className="text-[#72767D]">{meta.inscritos!==undefined?'Inscritos':'Seguidores'}</p><p className="text-white font-bold flex items-center justify-center gap-1"><Users className="w-3 h-3"/>{((meta.inscritos as number)||(meta.seguidores as number)||0).toLocaleString()}</p></div>}
+                        {meta.videos!==undefined && <div className="bg-[#1E1F22] rounded p-2 text-center"><p className="text-[#72767D]">Videos</p><p className="text-white font-bold"><Video className="w-3 h-3 inline"/>{' '}{(meta.videos as number).toLocaleString()}</p></div>}
+                        {meta.visualizacoes!==undefined && <div className="bg-[#1E1F22] rounded p-2 text-center"><p className="text-[#72767D]">Views</p><p className="text-white font-bold"><Eye className="w-3 h-3 inline"/>{' '}{(meta.visualizacoes as number).toLocaleString()}</p></div>}
                       </div>
                     )}
-
                     <div className="flex gap-2">
-                      <button onClick={() => setEditando(integracao)} className="flex items-center gap-1 text-xs text-[#B5BAC1] hover:text-white bg-[#1E1F22] hover:bg-[#313338] px-3 py-1.5 rounded transition-colors">
-                        <Settings className="w-3 h-3" /> Configurar
-                      </button>
-                      <button onClick={() => desconectar(integracao.id)} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded transition-colors">
-                        <Trash2 className="w-3 h-3" /> Desconectar
-                      </button>
+                      <button onClick={()=>abrirConfig(integracao)} className="flex items-center gap-1 text-xs text-[#B5BAC1] hover:text-white bg-[#1E1F22] hover:bg-[#313338] px-3 py-1.5 rounded transition-colors"><Settings className="w-3 h-3"/>Configurar</button>
+                      <button onClick={()=>desconectar(integracao.id)} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded transition-colors"><Trash2 className="w-3 h-3"/>Desconectar</button>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => conectar(plat.id)} className="flex items-center gap-2 text-sm text-[#B5BAC1] hover:text-white bg-[#1E1F22] hover:bg-[#313338] px-3 py-2 rounded-md transition-colors w-full justify-center">
-                    <Plug className="w-4 h-4" /> Conectar {plat.nome}
-                  </button>
+                  <button onClick={()=>conectar(plat.id)} className="flex items-center gap-2 text-sm text-[#B5BAC1] hover:text-white bg-[#1E1F22] hover:bg-[#313338] px-3 py-2 rounded-md transition-colors w-full justify-center"><Plug className="w-4 h-4"/>Conectar {plat.nome}</button>
                 )}
               </div>
             );
@@ -280,150 +269,139 @@ function IntegracoesContent() {
       {modalConectar && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-[#2B2D31] border border-[#313338] rounded-lg w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-[#1E1F22]">
-              <h3 className="text-white font-semibold">Conectar {modalConectar}</h3>
-              <button onClick={() => setModalConectar(null)} className="text-[#B5BAC1] hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
+            <div className="flex items-center justify-between p-4 border-b border-[#1E1F22]"><h3 className="text-white font-semibold">Conectar {modalConectar}</h3><button onClick={()=>setModalConectar(null)} className="text-[#B5BAC1] hover:text-white"><X className="w-5 h-5"/></button></div>
             <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs text-[#B5BAC1] mb-1">Nome de usuario ou URL do perfil</label>
-                <input
-                  type="text"
-                  value={campoUsername}
-                  onChange={(e) => setCampoUsername(e.target.value)}
-                  placeholder={modalConectar === 'instagram' ? '@usuario ou instagram.com/usuario' : '@usuario ou tiktok.com/@usuario'}
-                  className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none"
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && confirmarConexaoManual()}
-                />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={confirmarConexaoManual} disabled={conectando || !campoUsername.trim()} className="bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2">
-                  {conectando ? 'Conectando...' : <><Search className="w-4 h-4" /> Conectar</>}
-                </button>
-                <button onClick={() => setModalConectar(null)} className="text-[#B5BAC1] hover:text-white px-4 py-2 rounded-md text-sm">Cancelar</button>
-              </div>
-              <p className="text-xs text-[#72767D]">A integracao OAuth completa vira em breve. Por enquanto, conecte manualmente.</p>
+              <div><label className="block text-xs text-[#B5BAC1] mb-1">Nome de usuario ou URL</label><input type="text" value={campoUsername} onChange={e=>setCampoUsername(e.target.value)} placeholder="@usuario" className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none" autoFocus onKeyDown={e=>e.key==='Enter'&&confirmarConexaoManual()}/></div>
+              <div className="flex gap-2"><button onClick={confirmarConexaoManual} disabled={conectando||!campoUsername.trim()} className="bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2">{conectando?'...':<><Search className="w-4 h-4"/>Conectar</>}</button><button onClick={()=>setModalConectar(null)} className="text-[#B5BAC1] hover:text-white px-4 py-2 rounded-md text-sm">Cancelar</button></div>
             </div>
           </div>
         </div>
       )}
 
-      {editando && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#2B2D31] border border-[#313338] rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-[#1E1F22] sticky top-0 bg-[#2B2D31]">
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Configurar {PLATAFORMAS.find((p) => p.id === editando.plataforma)?.nome}
-              </h3>
-              <button onClick={() => setEditando(null)} className="text-[#B5BAC1] hover:text-white"><X className="w-5 h-5" /></button>
+      {editando && (() => {
+        const presets = getPresets();
+        const presetSel = getPresetSelecionado();
+        const presetAtual = presets.find(p=>p.nome===presetSel);
+        const plataformaNome = PLATAFORMAS.find(p=>p.id===editando.plataforma)?.nome || '';
+
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#2B2D31] border border-[#313338] rounded-lg w-full max-w-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-4 border-b border-[#1E1F22] sticky top-0 bg-[#2B2D31] z-10">
+                <h3 className="text-white font-semibold flex items-center gap-2"><Settings className="w-4 h-4"/>Configurar {plataformaNome}</h3>
+                <button onClick={()=>setEditando(null)} className="text-[#B5BAC1] hover:text-white"><X className="w-5 h-5"/></button>
+              </div>
+
+              <div className="flex border-b border-[#1E1F22]">
+                {[{id:'conteudo' as const, label:'Conteudo', icon:Zap},{id:'teste' as const, label:'Teste', icon:Play}].map(tab=>{const Icon=tab.icon; return (
+                  <button key={tab.id} onClick={()=>{setAbaConfig(tab.id);setResultadoTeste(null);if(tab.id==='teste')carregarServidores();}} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${abaConfig===tab.id?'border-b-2 text-white':'text-[#B5BAC1] hover:text-white'}`} style={abaConfig===tab.id?{borderBottomColor:'#5865F2'}:{}}><Icon className="w-4 h-4"/>{tab.label}</button>
+                )})}
+              </div>
+
+              <form onSubmit={salvarConfig} className="p-4 space-y-4">
+                {abaConfig === 'conteudo' && (
+                  <>
+                    {(editando.plataforma==='youtube'||editando.plataforma==='twitch') && (
+                      <div className="space-y-3">
+                        <h4 className="text-white text-sm font-medium flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400"/>Tipos de Conteudo</h4>
+                        {(editando.plataforma==='youtube' ? [
+                          {key:'notificarVideos',label:'Videos Novos',desc:'Notificar videos novos'},
+                          {key:'notificarShorts',label:'Shorts',desc:'Notificar shorts'},
+                          {key:'notificarLives',label:'Lives',desc:'Notificar lives'},
+                        ] : [
+                          {key:'notificarLives',label:'Lives',desc:'Notificar ao entrar ao vivo'},
+                        ]).map(op=>{const ativo=getMeta()[op.key]!==false; return (
+                          <label key={op.key} className="flex items-center justify-between bg-[#1E1F22] rounded-lg p-3 cursor-pointer">
+                            <div><p className="text-white text-sm">{op.label}</p><p className="text-xs text-[#72767D]">{op.desc}</p></div>
+                            <div className={`w-9 h-5 rounded-full relative flex-shrink-0 transition-colors ${ativo?'bg-[#5865F2]':'bg-[#3F4147]'}`} onClick={()=>atualizarToggle(op.key,!ativo)}><div className={`absolute top-[2px] w-4 h-4 rounded-full bg-white transition-all ${ativo?'left-[18px]':'left-[2px]'}`}/></div>
+                          </label>
+                        )})}
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-white text-sm font-medium flex items-center gap-2"><Star className="w-4 h-4 text-yellow-400"/>Presets de Mensagem</h4>
+                        <button type="button" onClick={()=>setMostrarAddPreset(!mostrarAddPreset)} className="text-xs text-[#5865F2] hover:text-[#4752C4] flex items-center gap-1"><Plus className="w-3 h-3"/>Novo</button>
+                      </div>
+
+                      {mostrarAddPreset && (
+                        <div className="bg-[#1E1F22] rounded-lg p-3 space-y-2">
+                          <input type="text" value={novoPresetNome} onChange={e=>setNovoPresetNome(e.target.value)} placeholder="Nome do preset" className="w-full bg-[#2B2D31] border border-[#3F4147] rounded px-2 py-1.5 text-white text-sm focus:border-[#5865F2] focus:outline-none"/>
+                          <textarea value={novoPresetTemplate} onChange={e=>setNovoPresetTemplate(e.target.value)} rows={3} placeholder="Template... Use {titulo}, {url}, {autor}" className="w-full bg-[#2B2D31] border border-[#3F4147] rounded px-2 py-1.5 text-white text-sm focus:border-[#5865F2] focus:outline-none resize-none font-mono"/>
+                          <div className="flex gap-2"><button type="button" onClick={adicionarPreset} className="bg-[#5865F2] text-white px-3 py-1 rounded text-xs">Adicionar</button><button type="button" onClick={()=>setMostrarAddPreset(false)} className="text-[#B5BAC1] text-xs">Cancelar</button></div>
+                        </div>
+                      )}
+
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {presets.map(p=>(
+                          <div key={p.nome} className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${presetSel===p.nome?'bg-[#5865F2]/20 border border-[#5865F2]/30':'hover:bg-[#313338]'}`} onClick={()=>selecionarPreset(p.nome)}>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm">{p.nome}</p>
+                              <p className="text-xs text-[#72767D] truncate">{p.template.substring(0,60)}...</p>
+                            </div>
+                            {presets.length > 1 && <button type="button" onClick={e=>{e.stopPropagation();removerPreset(p.nome);}} className="text-[#72767D] hover:text-red-400 ml-2"><X className="w-3 h-3"/></button>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {presetAtual && (
+                        <div className="bg-[#1E1F22] rounded-lg p-3">
+                          <p className="text-xs text-[#72767D] mb-2">Preview:</p>
+                          <div className="text-sm text-white whitespace-pre-wrap font-mono bg-[#0F0F11] rounded p-2 text-xs leading-relaxed">
+                            {presetAtual.template.replace(/{titulo}/g,'🎯 Titulo Exemplo').replace(/{url}/g,'https://exemplo.com').replace(/{autor}/g,'Canal').replace(/{jogo}/g,'🎮 Jogo').replace(/{plataforma}/g,plataformaNome)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {abaConfig === 'teste' && (
+                  <div className="space-y-4">
+                    <h4 className="text-white text-sm font-medium flex items-center gap-2"><Play className="w-4 h-4 text-green-400"/>Enviar Teste</h4>
+
+                    <div>
+                      <label className="block text-xs text-[#B5BAC1] mb-1 flex items-center gap-1"><Server className="w-3 h-3"/>Servidor</label>
+                      <select value={servidorTeste} onChange={e=>carregarCanais(e.target.value)} className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none">
+                        <option value="">Selecione...</option>
+                        {servidores.map(s=><option key={s.id} value={s.id}>{s.nome}</option>)}
+                      </select>
+                    </div>
+
+                    {canais.length > 0 && (
+                      <div>
+                        <label className="block text-xs text-[#B5BAC1] mb-1 flex items-center gap-1"><Hash className="w-3 h-3"/>Canal</label>
+                        <select value={canalTeste} onChange={e=>setCanalTeste(e.target.value)} className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none">
+                          <option value="">Selecione...</option>
+                          {canais.map(c=><option key={c.id} value={c.id}># {c.nome}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {resultadoTeste && (
+                      <div className={`px-3 py-2 rounded text-xs ${resultadoTeste.tipo==='sucesso'?'bg-green-500/10 text-green-400':'bg-red-500/10 text-red-400'}`}>{resultadoTeste.texto}</div>
+                    )}
+
+                    <button type="button" onClick={enviarTeste} disabled={!canalTeste||enviandoTeste} className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2">
+                      {enviandoTeste?'Enviando...':<><Send className="w-4 h-4"/>Enviar Teste</>}
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2 border-t border-[#1E1F22]">
+                  <button type="submit" className="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Salvar</button>
+                  <button type="button" onClick={()=>setEditando(null)} className="text-[#B5BAC1] hover:text-white px-4 py-2 rounded-md text-sm">Cancelar</button>
+                </div>
+              </form>
             </div>
-
-            <form onSubmit={salvarConfig} className="p-4 space-y-4">
-              {editando.plataforma === 'youtube' && (
-                <div className="space-y-3">
-                  <h4 className="text-white text-sm font-medium flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" />Tipos de Conteudo</h4>
-                  <p className="text-xs text-[#B5BAC1]">Escolha quais tipos de conteudo o bot deve monitorar:</p>
-                  
-                  {[
-                    { key: 'notificarVideos', label: 'Videos Novos', desc: 'Notificar quando um video novo for publicado' },
-                    { key: 'notificarShorts', label: 'Shorts', desc: 'Notificar quando um Short for publicado' },
-                    { key: 'notificarLives', label: 'Lives', desc: 'Notificar quando uma live comecar' },
-                  ].map((op) => {
-                    const meta = editando.metadata ? JSON.parse(editando.metadata) : {};
-                    const ativo = meta[op.key] !== false;
-                    return (
-                      <label key={op.key} className="flex items-center justify-between bg-[#1E1F22] rounded-lg p-3 cursor-pointer">
-                        <div>
-                          <p className="text-white text-sm">{op.label}</p>
-                          <p className="text-xs text-[#72767D]">{op.desc}</p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={ativo}
-                          onChange={(e) => atualizarMetadata(op.key, e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-[#3F4147] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:absolute after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5865F2] relative flex-shrink-0">
-                          <div className={`absolute top-[2px] w-4 h-4 rounded-full bg-white transition-all ${ativo ? 'left-[18px]' : 'left-[2px]'}`} />
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-
-              {editando.plataforma === 'twitch' && (
-                <div className="space-y-3">
-                  <h4 className="text-white text-sm font-medium flex items-center gap-2"><Zap className="w-4 h-4 text-purple-400" />Notificacoes</h4>
-                  {[
-                    { key: 'notificarLives', label: 'Lives', desc: 'Notificar quando entrar ao vivo' },
-                  ].map((op) => {
-                    const meta = editando.metadata ? JSON.parse(editando.metadata) : {};
-                    const ativo = meta[op.key] !== false;
-                    return (
-                      <label key={op.key} className="flex items-center justify-between bg-[#1E1F22] rounded-lg p-3 cursor-pointer">
-                        <div>
-                          <p className="text-white text-sm">{op.label}</p>
-                          <p className="text-xs text-[#72767D]">{op.desc}</p>
-                        </div>
-                        <input type="checkbox" checked={ativo} onChange={(e) => atualizarMetadata(op.key, e.target.checked)} className="sr-only peer" />
-                        <div className="w-9 h-5 bg-[#3F4147] peer-focus:outline-none rounded-full relative flex-shrink-0">
-                          <div className={`absolute top-[2px] w-4 h-4 rounded-full bg-white transition-all ${ativo ? 'left-[18px]' : 'left-[2px]'}`} />
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-
-              {(editando.plataforma === 'tiktok' || editando.plataforma === 'instagram') && (
-                <div>
-                  <label className="block text-xs text-[#B5BAC1] mb-1 flex items-center gap-1">
-                    <Bell className="w-3 h-3" /> Webhook do Discord
-                  </label>
-                  <input
-                    type="url"
-                    value={editando.webhookUrl || ''}
-                    onChange={(e) => setEditando((prev) => prev ? { ...prev, webhookUrl: e.target.value } : null)}
-                    placeholder="https://discord.com/api/webhooks/..."
-                    className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs text-[#B5BAC1] mb-1 flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3" /> Template da Mensagem
-                </label>
-                <textarea
-                  value={editando.mensagemTemplate}
-                  onChange={(e) => setEditando((prev) => prev ? { ...prev, mensagemTemplate: e.target.value } : null)}
-                  rows={3}
-                  className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none resize-none font-mono"
-                />
-                <p className="text-xs text-[#72767D] mt-1">
-                  Variaveis: <code className="bg-[#1E1F22] px-1 rounded">{'{plataforma}'}</code> <code className="bg-[#1E1F22] px-1 rounded">{'{titulo}'}</code> <code className="bg-[#1E1F22] px-1 rounded">{'{url}'}</code> <code className="bg-[#1E1F22] px-1 rounded">{'{autor}'}</code>
-                </p>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button type="submit" className="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Salvar</button>
-                <button type="button" onClick={() => setEditando(null)} className="text-[#B5BAC1] hover:text-white px-4 py-2 rounded-md text-sm">Cancelar</button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
 
 export default function PaginaIntegracoes() {
-  return (
-    <Suspense fallback={<div className="animate-pulse text-[#B5BAC1] p-6">Carregando...</div>}>
-      <IntegracoesContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="animate-pulse text-[#B5BAC1] p-6">Carregando...</div>}><IntegracoesContent /></Suspense>;
 }
