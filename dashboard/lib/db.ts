@@ -40,6 +40,7 @@ function criarTabelas(sqlite: Database.Database) {
       ativo INTEGER NOT NULL DEFAULT 1,
       webhook_url TEXT,
       mensagem_template TEXT DEFAULT 'Novo conteudo no {plataforma}!\n\n{titulo}\n{url}',
+      metadata TEXT,
       criado_em INTEGER NOT NULL,
       atualizado_em INTEGER NOT NULL
     );

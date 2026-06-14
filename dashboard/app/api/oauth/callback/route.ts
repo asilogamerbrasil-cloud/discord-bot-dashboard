@@ -103,6 +103,19 @@ export async function GET(req: NextRequest) {
     const userData = await userRes.json();
     const mapped = config.mapUser(userData);
 
+    let metadata = null;
+    if (plataforma === 'youtube') {
+      const d = userData as { items?: [{ statistics?: { subscriberCount: string; videoCount: string; viewCount: string } }] };
+      const stats = d?.items?.[0]?.statistics;
+      if (stats) {
+        metadata = JSON.stringify({
+          inscritos: parseInt(stats.subscriberCount) || 0,
+          videos: parseInt(stats.videoCount) || 0,
+          visualizacoes: parseInt(stats.viewCount) || 0,
+        });
+      }
+    }
+
     const db = getDb();
     const existente = await db
       .select()
@@ -120,6 +133,7 @@ export async function GET(req: NextRequest) {
           nomeConta: mapped.nomeConta,
           avatarUrl: mapped.avatarUrl,
           contaId: mapped.contaId,
+          metadata,
           atualizadoEm: new Date(),
         })
         .where(eq(integracoes.id, existente[0].id));
@@ -132,6 +146,7 @@ export async function GET(req: NextRequest) {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token || null,
         tokenExpira: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+        metadata,
       });
     }
 

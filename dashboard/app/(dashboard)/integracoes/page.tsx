@@ -19,6 +19,7 @@ interface Integracao {
   ativo: boolean;
   webhookUrl: string | null;
   mensagemTemplate: string;
+  metadata: string | null;
 }
 
 const PLATAFORMAS = [
@@ -290,6 +291,40 @@ function IntegracoesContent() {
                           </p>
                         </div>
                       </div>
+
+                      {integracao.metadata && (() => {
+                        try {
+                          const meta = JSON.parse(integracao.metadata);
+                          return (
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {meta.inscritos !== undefined && (
+                                <div className="bg-[#1E1F22] rounded p-2 text-center">
+                                  <p className="text-[#72767D]">Inscritos</p>
+                                  <p className="text-white font-bold">{meta.inscritos.toLocaleString()}</p>
+                                </div>
+                              )}
+                              {meta.videos !== undefined && (
+                                <div className="bg-[#1E1F22] rounded p-2 text-center">
+                                  <p className="text-[#72767D]">Videos</p>
+                                  <p className="text-white font-bold">{meta.videos.toLocaleString()}</p>
+                                </div>
+                              )}
+                              {meta.visualizacoes !== undefined && (
+                                <div className="col-span-2 bg-[#1E1F22] rounded p-2 text-center">
+                                  <p className="text-[#72767D]">Visualizacoes</p>
+                                  <p className="text-white font-bold">{meta.visualizacoes.toLocaleString()}</p>
+                                </div>
+                              )}
+                              {meta.seguidores !== undefined && (
+                                <div className="col-span-2 bg-[#1E1F22] rounded p-2 text-center">
+                                  <p className="text-[#72767D]">Seguidores</p>
+                                  <p className="text-white font-bold">{meta.seguidores.toLocaleString()}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        } catch { return null; }
+                      })()}
 
                       <div className="flex gap-2">
                         <button

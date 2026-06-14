@@ -102,6 +102,20 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ erro: 'Usuario Twitch nao encontrado' }, { status: 400 });
       }
 
+      let metadata = null;
+      try {
+        const followersRes = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Client-Id': clientId,
+          },
+        });
+        if (followersRes.ok) {
+          const followersData = await followersRes.json() as { total?: number };
+          metadata = JSON.stringify({ seguidores: followersData.total || 0 });
+        }
+      } catch (e) { console.error('Followers fetch error:', e); }
+
       const db = getDb();
       const existente = await db
         .select()
@@ -118,6 +132,7 @@ export async function PUT(req: NextRequest) {
             nomeConta: user.display_name,
             avatarUrl: user.profile_image_url,
             contaId: user.id,
+            metadata,
             atualizadoEm: new Date(),
           })
           .where(eq(integracoes.id, existente[0].id));
@@ -135,6 +150,7 @@ export async function PUT(req: NextRequest) {
           contaId: user.id,
           accessToken: token,
           refreshToken: process.env.TWITCH_REFRESH_TOKEN,
+          metadata,
         })
         .returning();
 

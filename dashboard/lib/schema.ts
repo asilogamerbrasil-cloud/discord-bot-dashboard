@@ -40,7 +40,8 @@ export const integracoes = sqliteTable('integracoes', {
   contaId: text('conta_id'),
   ativo: integer('ativo', { mode: 'boolean' }).notNull().default(true),
   webhookUrl: text('webhook_url'),
-  mensagemTemplate: text('mensagem_template').default('🔥 Novo conteudo no {plataforma}!\n\n{titulo}\n{url}'),
+  mensagemTemplate: text('mensagem_template').default('Novo conteudo no {plataforma}!\n\n{titulo}\n{url}'),
+  metadata: text('metadata'),
   criadoEm: integer('criado_em', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
