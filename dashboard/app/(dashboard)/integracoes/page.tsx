@@ -103,7 +103,10 @@ function IntegracoesContent() {
   function obterIntegracao(p: string) { return integracoes.find(i => i.plataforma === p); }
 
   async function conectar(plataforma: string) {
-    if (plataforma === 'youtube' || plataforma === 'twitch') { window.location.href = `/api/oauth/login?plataforma=${plataforma}`; return; }
+    if (plataforma === 'youtube' || plataforma === 'twitch' || plataforma === 'instagram') {
+      window.location.href = `/api/oauth/login?plataforma=${plataforma}`;
+      return;
+    }
     setModalConectar(plataforma); setCampoUsername('');
   }
 

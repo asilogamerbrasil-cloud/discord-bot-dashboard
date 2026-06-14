@@ -46,6 +46,21 @@ const OAUTH_CONFIG: Record<string, {
       };
     },
   },
+  instagram: {
+    tokenUrl: 'https://api.instagram.com/oauth/access_token',
+    userInfoUrl: 'https://graph.instagram.com/me?fields=id,username,account_type,media_count',
+    clientIdEnv: 'INSTAGRAM_CLIENT_ID',
+    clientSecretEnv: 'INSTAGRAM_CLIENT_SECRET',
+    platformName: 'instagram',
+    mapUser: (data: unknown) => {
+      const d = data as { id: string; username: string; account_type: string; media_count: number };
+      return {
+        contaId: d?.id || '',
+        nomeConta: d?.username || '',
+        avatarUrl: '',
+      };
+    },
+  },
 };
 
 export async function GET(req: NextRequest) {

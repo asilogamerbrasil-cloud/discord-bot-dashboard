@@ -21,6 +21,11 @@ const OAUTH_CONFIG: Record<string, {
     scope: 'user:read:email',
     extraParams: { force_verify: 'true' },
   },
+  instagram: {
+    authUrl: 'https://api.instagram.com/oauth/authorize',
+    clientIdEnv: 'INSTAGRAM_CLIENT_ID',
+    scope: 'user_profile,user_media',
+  },
 };
 
 export async function GET(req: NextRequest) {

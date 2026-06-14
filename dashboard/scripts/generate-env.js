@@ -12,6 +12,8 @@ const envVars = {
   YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET || '',
   TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID || '',
   TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET || '',
+  INSTAGRAM_CLIENT_ID: process.env.INSTAGRAM_CLIENT_ID || '',
+  INSTAGRAM_CLIENT_SECRET: process.env.INSTAGRAM_CLIENT_SECRET || '',
 };
 
 const content = Object.entries(envVars)
