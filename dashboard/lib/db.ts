@@ -5,6 +5,31 @@ import fs from 'fs';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+function criarTabelas(sqlite: Database.Database) {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS configuracao_geral (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome_bot TEXT NOT NULL DEFAULT 'Meu Bot',
+      avatar_url TEXT,
+      banner_url TEXT,
+      bio TEXT DEFAULT 'Ola! Sou um bot gerenciado pelo painel.',
+      status TEXT NOT NULL DEFAULT 'online',
+      atividade TEXT DEFAULT '{servidores} servidores',
+      criado_em INTEGER NOT NULL,
+      atualizado_em INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS administradores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      discord_id TEXT NOT NULL UNIQUE,
+      nome TEXT NOT NULL,
+      avatar_url TEXT,
+      role TEXT NOT NULL DEFAULT 'admin',
+      adicionado_em INTEGER NOT NULL
+    );
+  `);
+}
+
 export function getDb() {
   if (_db) return _db;
 
@@ -18,6 +43,8 @@ export function getDb() {
 
   const sqlite = new Database(resolvedPath);
   sqlite.pragma('journal_mode = WAL');
+
+  criarTabelas(sqlite);
 
   _db = drizzle(sqlite);
   return _db;
