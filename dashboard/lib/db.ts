@@ -27,6 +27,22 @@ function criarTabelas(sqlite: Database.Database) {
       role TEXT NOT NULL DEFAULT 'admin',
       adicionado_em INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS integracoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plataforma TEXT NOT NULL,
+      access_token TEXT,
+      refresh_token TEXT,
+      token_expira INTEGER,
+      nome_conta TEXT,
+      avatar_url TEXT,
+      conta_id TEXT,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      webhook_url TEXT,
+      mensagem_template TEXT DEFAULT 'Novo conteudo no {plataforma}!\n\n{titulo}\n{url}',
+      criado_em INTEGER NOT NULL,
+      atualizado_em INTEGER NOT NULL
+    );
   `);
 }
 

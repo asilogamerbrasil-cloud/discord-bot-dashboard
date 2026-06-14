@@ -28,3 +28,23 @@ export const administradores = sqliteTable('administradores', {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const integracoes = sqliteTable('integracoes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  plataforma: text('plataforma', { enum: ['youtube', 'twitch', 'tiktok', 'instagram'] }).notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpira: integer('token_expira', { mode: 'timestamp' }),
+  nomeConta: text('nome_conta'),
+  avatarUrl: text('avatar_url'),
+  contaId: text('conta_id'),
+  ativo: integer('ativo', { mode: 'boolean' }).notNull().default(true),
+  webhookUrl: text('webhook_url'),
+  mensagemTemplate: text('mensagem_template').default('🔥 Novo conteudo no {plataforma}!\n\n{titulo}\n{url}'),
+  criadoEm: integer('criado_em', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  atualizadoEm: integer('atualizado_em', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
