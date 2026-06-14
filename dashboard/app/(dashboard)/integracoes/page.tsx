@@ -88,8 +88,27 @@ export default function PaginaIntegracoes() {
   }
 
   async function conectar(plataforma: string) {
-    if (plataforma === 'youtube' || plataforma === 'twitch') {
-      window.location.href = `/api/oauth/login?plataforma=${plataforma}`;
+    if (plataforma === 'youtube') {
+      window.location.href = `/api/oauth/login?plataforma=youtube`;
+      return;
+    }
+
+    if (plataforma === 'twitch') {
+      try {
+        const res = await fetch('/api/integracoes', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plataforma: 'twitch' }),
+        });
+        if (res.ok) {
+          await carregarIntegracoes();
+        } else {
+          const data = await res.json();
+          alert(data.erro || 'Erro ao conectar Twitch');
+        }
+      } catch (e) {
+        alert('Erro ao conectar');
+      }
       return;
     }
 

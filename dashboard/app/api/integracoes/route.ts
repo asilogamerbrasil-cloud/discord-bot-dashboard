@@ -72,6 +72,62 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    const { plataforma } = await req.json();
+
+    if (plataforma === 'twitch') {
+      const token = process.env.TWITCH_ACCESS_TOKEN;
+      const refresh = process.env.TWITCH_REFRESH_TOKEN;
+      
+      if (!token) {
+        return NextResponse.json({ erro: 'Tokens da Twitch nao configurados' }, { status: 400 });
+      }
+
+      const db = getDb();
+      const existente = await db
+        .select()
+        .from(integracoes)
+        .where(eq(integracoes.plataforma, 'twitch'))
+        .limit(1);
+
+      if (existente.length > 0) {
+        await db
+          .update(integracoes)
+          .set({
+            accessToken: token,
+            refreshToken: refresh,
+            nomeConta: 'Twitch Streamer',
+            atualizadoEm: new Date(),
+          })
+          .where(eq(integracoes.id, existente[0].id));
+
+        const [atualizada] = await db
+          .select()
+          .from(integracoes)
+          .where(eq(integracoes.id, existente[0].id));
+        return NextResponse.json(atualizada);
+      }
+
+      const [nova] = await db
+        .insert(integracoes)
+        .values({
+          plataforma: 'twitch',
+          nomeConta: 'Twitch Streamer',
+          accessToken: token,
+          refreshToken: refresh,
+        })
+        .returning();
+
+      return NextResponse.json(nova, { status: 201 });
+    }
+
+    return NextResponse.json({ erro: 'Plataforma nao suportada' }, { status: 400 });
+  } catch (erro) {
+    return NextResponse.json({ erro: 'Erro interno' }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   try {
     const { id, ativo, webhookUrl, mensagemTemplate } = await req.json();
