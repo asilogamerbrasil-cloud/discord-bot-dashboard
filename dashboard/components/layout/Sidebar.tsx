@@ -11,13 +11,15 @@ import {
   Bot,
   Shield,
   Radio,
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { useState } from 'react';
 
 const menus = [
   { label: 'Visao Geral', href: '/', icon: LayoutDashboard },
   { label: 'Servidores', href: '/servidores', icon: Server },
+  { label: 'Mensagens', href: '/mensagens', icon: MessageSquare },
   { label: 'Configuracoes', href: '/configuracoes', icon: Settings },
   { label: 'Integracoes', href: '/integracoes', icon: Radio },
   { label: 'Administradores', href: '/admins', icon: Shield },

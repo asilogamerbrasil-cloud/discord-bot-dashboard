@@ -39,6 +39,10 @@ async function iniciar() {
     client.on('ready', eventoReady);
     client.on('interactionCreate', eventoInteraction);
 
+    const { iniciarAgendador } = await import('./servicos/agendador.js');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    iniciarAgendador(client as any);
+
     const readyClient = client as Client<true>;
     if (client.isReady()) {
       await eventoReady(readyClient);

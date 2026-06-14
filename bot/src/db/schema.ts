@@ -72,3 +72,21 @@ export const integracoes = sqliteTable('integracoes', {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const mensagensProgramadas = sqliteTable('mensagens_programadas', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  nome: text('nome').notNull().default('Nova Mensagem'),
+  tipo: text('tipo', { enum: ['manual', 'shopee_preset'] }).notNull().default('manual'),
+  mensagem: text('mensagem').notNull().default(''),
+  timerIntervalo: integer('timer_intervalo').notNull().default(3600),
+  servidoresCanais: text('servidores_canais'),
+  shopeePreset: text('shopee_preset'),
+  ultimoEnvio: integer('ultimo_envio', { mode: 'timestamp' }),
+  ativo: integer('ativo', { mode: 'boolean' }).notNull().default(true),
+  criadoEm: integer('criado_em', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  atualizadoEm: integer('atualizado_em', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

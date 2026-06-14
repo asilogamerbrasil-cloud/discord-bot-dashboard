@@ -44,6 +44,20 @@ function criarTabelas(sqlite: Database.Database) {
       criado_em INTEGER NOT NULL,
       atualizado_em INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS mensagens_programadas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL DEFAULT 'Nova Mensagem',
+      tipo TEXT NOT NULL DEFAULT 'manual',
+      mensagem TEXT NOT NULL DEFAULT '',
+      timer_intervalo INTEGER NOT NULL DEFAULT 3600,
+      servidores_canais TEXT,
+      shopee_preset TEXT,
+      ultimo_envio INTEGER,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      criado_em INTEGER NOT NULL,
+      atualizado_em INTEGER NOT NULL
+    );
   `);
 }
 
