@@ -5,12 +5,13 @@ import type { NextRequest } from 'next/server';
 const DISCORD_CLIENT_ID = '1515429281126289638';
 const DISCORD_CLIENT_SECRET = 'Dy3eFMa4uh5Ag1VtaNLeV6JJJzfOCHwR';
 const REDIRECT_URI = 'https://dashboard-production-5c50.up.railway.app/api/auth/callback';
+const BASE_URL = 'https://dashboard-production-5c50.up.railway.app';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
 
   if (!code) {
-    return NextResponse.redirect(new URL('/login?erro=sem_codigo', req.url));
+    return NextResponse.redirect(new URL('/login?erro=sem_codigo', BASE_URL));
   }
 
   try {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenRes.ok) {
       console.error('Discord token error:', await tokenRes.text());
-      return NextResponse.redirect(new URL('/login?erro=token', req.url));
+      return NextResponse.redirect(new URL('/login?erro=token', BASE_URL));
     }
 
     const tokenData = await tokenRes.json();
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!userRes.ok) {
-      return NextResponse.redirect(new URL('/login?erro=user', req.url));
+      return NextResponse.redirect(new URL('/login?erro=user', BASE_URL));
     }
 
     const userData = await userRes.json();
@@ -52,9 +53,9 @@ export async function GET(req: NextRequest) {
       accessToken: tokenData.access_token,
     });
 
-    return NextResponse.redirect(new URL('/', req.url));
+    return NextResponse.redirect(new URL('/', BASE_URL));
   } catch (erro) {
     console.error('Callback error:', erro);
-    return NextResponse.redirect(new URL('/login?erro=desconhecido', req.url));
+    return NextResponse.redirect(new URL('/login?erro=desconhecido', BASE_URL));
   }
 }
