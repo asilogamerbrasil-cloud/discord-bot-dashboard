@@ -81,12 +81,23 @@ export const mensagensProgramadas = sqliteTable('mensagens_programadas', {
   timerIntervalo: integer('timer_intervalo').notNull().default(3600),
   servidoresCanais: text('servidores_canais'),
   shopeePreset: text('shopee_preset'),
+  shopeeConfig: text('shopee_config'),
   ultimoEnvio: integer('ultimo_envio', { mode: 'timestamp' }),
   ativo: integer('ativo', { mode: 'boolean' }).notNull().default(true),
   criadoEm: integer('criado_em', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
   atualizadoEm: integer('atualizado_em', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const envioLogs = sqliteTable('envio_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  mensagemId: integer('mensagem_id').notNull(),
+  presetKey: text('preset_key').notNull(),
+  produtosEnviados: text('produtos_enviados').notNull(),
+  criadoEm: integer('criado_em', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
 });

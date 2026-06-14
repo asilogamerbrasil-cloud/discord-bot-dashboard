@@ -53,10 +53,19 @@ function criarTabelas(sqlite: Database.Database) {
       timer_intervalo INTEGER NOT NULL DEFAULT 3600,
       servidores_canais TEXT,
       shopee_preset TEXT,
+      shopee_config TEXT,
       ultimo_envio INTEGER,
       ativo INTEGER NOT NULL DEFAULT 1,
       criado_em INTEGER NOT NULL,
       atualizado_em INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS envio_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mensagem_id INTEGER NOT NULL,
+      preset_key TEXT NOT NULL,
+      produtos_enviados TEXT NOT NULL,
+      criado_em INTEGER NOT NULL
     );
   `);
 }

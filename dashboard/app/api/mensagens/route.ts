@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { nome, tipo, mensagem, timerIntervalo, servidoresCanais, shopeePreset } = body;
+    const { nome, tipo, mensagem, timerIntervalo, servidoresCanais, shopeePreset, shopeeConfig } = body;
 
     const db = getDb();
     const [nova] = await db
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         timerIntervalo: timerIntervalo || 3600,
         servidoresCanais: servidoresCanais ? JSON.stringify(servidoresCanais) : null,
         shopeePreset: shopeePreset || null,
+        shopeeConfig: shopeeConfig ? JSON.stringify(shopeeConfig) : null,
       })
       .returning();
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, nome, tipo, mensagem, timerIntervalo, servidoresCanais, shopeePreset, ativo, ultimoEnvio } = body;
+    const { id, nome, tipo, mensagem, timerIntervalo, servidoresCanais, shopeePreset, shopeeConfig, ativo, ultimoEnvio } = body;
 
     if (!id) {
       return NextResponse.json({ erro: 'ID obrigatorio' }, { status: 400 });
@@ -56,6 +57,7 @@ export async function PATCH(req: NextRequest) {
     if (timerIntervalo !== undefined) dados.timerIntervalo = timerIntervalo;
     if (servidoresCanais !== undefined) dados.servidoresCanais = JSON.stringify(servidoresCanais);
     if (shopeePreset !== undefined) dados.shopeePreset = shopeePreset;
+    if (shopeeConfig !== undefined) dados.shopeeConfig = JSON.stringify(shopeeConfig);
     if (typeof ativo === 'boolean') dados.ativo = ativo;
     if (ultimoEnvio === null) dados.ultimoEnvio = null;
 
