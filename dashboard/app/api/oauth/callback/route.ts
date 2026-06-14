@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/db';
+import { integracoes } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 import type { NextRequest } from 'next/server';
+
+const BASE_URL_PRD = 'https://dashboard-production-5c50.up.railway.app';
 
 const OAUTH_CONFIG: Record<string, {
   tokenUrl: string;
@@ -46,22 +51,22 @@ const OAUTH_CONFIG: Record<string, {
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const plataforma = req.nextUrl.searchParams.get('plataforma');
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   const config = OAUTH_CONFIG[plataforma || ''];
 
   if (!code || !config) {
-    return NextResponse.redirect(new URL('/integracoes?erro=parametros', baseUrl));
+    return NextResponse.redirect(new URL('/integracoes?erro=parametros', BASE_URL_PRD));
   }
 
   const clientId = process.env[config.clientIdEnv];
   const clientSecret = process.env[config.clientSecretEnv];
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/integracoes?erro=config', baseUrl));
+    console.error(`OAuth missing: ${config.clientIdEnv}=${!!clientId} ${config.clientSecretEnv}=${!!clientSecret}`);
+    return NextResponse.redirect(new URL('/integracoes?erro=config', BASE_URL_PRD));
   }
 
   try {
-    const redirectUri = `${baseUrl}/api/oauth/callback?plataforma=${plataforma}`;
+    const redirectUri = `${BASE_URL_PRD}/api/oauth/callback?plataforma=${plataforma}`;
 
     const tokenRes = await fetch(config.tokenUrl, {
       method: 'POST',
@@ -76,8 +81,9 @@ export async function GET(req: NextRequest) {
     });
 
     if (!tokenRes.ok) {
-      console.error('Token error:', await tokenRes.text());
-      return NextResponse.redirect(new URL('/integracoes?erro=token', baseUrl));
+      const errText = await tokenRes.text();
+      console.error('Token exchange error:', errText.substring(0, 500));
+      return NextResponse.redirect(new URL('/integracoes?erro=token', BASE_URL_PRD));
     }
 
     const tokenData = await tokenRes.json();
@@ -90,35 +96,48 @@ export async function GET(req: NextRequest) {
     });
 
     if (!userRes.ok) {
-      return NextResponse.redirect(new URL('/integracoes?erro=user', baseUrl));
+      console.error('User info error:', await userRes.text().catch(() => ''));
+      return NextResponse.redirect(new URL('/integracoes?erro=user', BASE_URL_PRD));
     }
 
     const userData = await userRes.json();
     const mapped = config.mapUser(userData);
 
-    const saveRes = await fetch(`${baseUrl}/api/integracoes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        plataforma,
+    const db = getDb();
+    const existente = await db
+      .select()
+      .from(integracoes)
+      .where(eq(integracoes.plataforma, plataforma as 'youtube' | 'twitch'))
+      .limit(1);
+
+    if (existente.length > 0) {
+      await db
+        .update(integracoes)
+        .set({
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || null,
+          tokenExpira: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+          nomeConta: mapped.nomeConta,
+          avatarUrl: mapped.avatarUrl,
+          contaId: mapped.contaId,
+          atualizadoEm: new Date(),
+        })
+        .where(eq(integracoes.id, existente[0].id));
+    } else {
+      await db.insert(integracoes).values({
+        plataforma: plataforma as 'youtube' | 'twitch' | 'tiktok' | 'instagram',
         nomeConta: mapped.nomeConta,
         avatarUrl: mapped.avatarUrl,
         contaId: mapped.contaId,
         accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
-        tokenExpira: tokenData.expires_in
-          ? Date.now() + tokenData.expires_in * 1000
-          : null,
-      }),
-    });
-
-    if (!saveRes.ok) {
-      return NextResponse.redirect(new URL('/integracoes?erro=save', baseUrl));
+        refreshToken: tokenData.refresh_token || null,
+        tokenExpira: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+      });
     }
 
-    return NextResponse.redirect(new URL('/integracoes?sucesso=1', baseUrl));
+    return NextResponse.redirect(new URL('/integracoes?sucesso=1', BASE_URL_PRD));
   } catch (erro) {
-    console.error('OAuth error:', erro);
-    return NextResponse.redirect(new URL('/integracoes?erro=desconhecido', baseUrl));
+    console.error('OAuth callback error:', erro);
+    return NextResponse.redirect(new URL('/integracoes?erro=desconhecido', BASE_URL_PRD));
   }
 }

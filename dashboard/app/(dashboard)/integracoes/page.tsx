@@ -116,7 +116,22 @@ function IntegracoesContent() {
     }
 
     if (plataforma === 'twitch') {
-      window.location.href = '/api/oauth/login?plataforma=twitch';
+      try {
+        const res = await fetch('/api/integracoes', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plataforma: 'twitch' }),
+        });
+        if (res.ok) {
+          await carregarIntegracoes();
+          setStatusMsg({ tipo: 'sucesso', texto: 'Twitch conectado com sucesso!' });
+        } else {
+          const data = await res.json();
+          setStatusMsg({ tipo: 'erro', texto: data.erro || 'Erro ao conectar Twitch' });
+        }
+      } catch (e) {
+        setStatusMsg({ tipo: 'erro', texto: 'Erro ao conectar' });
+      }
       return;
     }
 
