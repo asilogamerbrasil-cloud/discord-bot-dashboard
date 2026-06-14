@@ -12,8 +12,18 @@ interface Configuracao {
   atividade: string;
 }
 
+const configPadrao: Configuracao = {
+  id: 0,
+  nomeBot: 'Meu Bot',
+  avatarUrl: null,
+  bannerUrl: null,
+  bio: 'Ola! Sou um bot gerenciado pelo painel.',
+  status: 'online',
+  atividade: '{servidores} servidores',
+};
+
 export default function PaginaConfiguracoes() {
-  const [config, setConfig] = useState<Configuracao | null>(null);
+  const [config, setConfig] = useState<Configuracao>(configPadrao);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
@@ -28,18 +38,23 @@ export default function PaginaConfiguracoes() {
       if (resposta.ok) {
         const dados = await resposta.json();
         setConfig(dados);
+      } else {
+        const erro = await resposta.json().catch(() => ({ erro: 'Erro ao carregar' }));
+        setMensagem({ tipo: 'erro', texto: erro.erro || 'Erro ao carregar configuracoes' });
       }
     } catch (erro) {
-      console.error('Erro ao carregar:', erro);
+      setMensagem({ tipo: 'erro', texto: 'Erro de conexao com o servidor' });
     } finally {
       setCarregando(false);
     }
   }
 
+  function atualizarCampo(campo: keyof Configuracao, valor: string) {
+    setConfig((prev) => ({ ...prev, [campo]: valor }));
+  }
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!config) return;
-
     setSalvando(true);
     setMensagem(null);
 
@@ -62,14 +77,14 @@ export default function PaginaConfiguracoes() {
         setConfig(atualizada);
         setMensagem({ tipo: 'sucesso', texto: 'Configuracao salva com sucesso!' });
       } else {
-        const erro = await resposta.json();
+        const erro = await resposta.json().catch(() => ({ erro: 'Erro ao salvar' }));
         setMensagem({ tipo: 'erro', texto: erro.erro || 'Erro ao salvar' });
       }
     } catch (erro) {
       setMensagem({ tipo: 'erro', texto: 'Erro de conexao' });
     } finally {
       setSalvando(false);
-      setTimeout(() => setMensagem(null), 3000);
+      setTimeout(() => setMensagem(null), 5000);
     }
   }
 
@@ -77,9 +92,7 @@ export default function PaginaConfiguracoes() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Configuracoes Gerais</h1>
-        <div className="bg-[#2B2D31] border border-[#1E1F22] rounded-lg p-8 text-center">
-          <div className="animate-pulse text-[#B5BAC1]">Carregando...</div>
-        </div>
+        <div className="animate-pulse text-[#B5BAC1]">Carregando...</div>
       </div>
     );
   }
@@ -102,7 +115,7 @@ export default function PaginaConfiguracoes() {
 
       <form onSubmit={salvar} className="bg-[#2B2D31] border border-[#1E1F22] rounded-lg p-6 space-y-6 max-w-2xl">
         <div className="flex items-start gap-4 pb-6 border-b border-[#1E1F22]">
-          {config?.avatarUrl ? (
+          {config.avatarUrl ? (
             <img
               src={config.avatarUrl}
               alt="Avatar"
@@ -110,11 +123,11 @@ export default function PaginaConfiguracoes() {
             />
           ) : (
             <div className="w-16 h-16 rounded-full bg-[#5865F2] flex items-center justify-center text-2xl text-white font-bold">
-              {(config?.nomeBot || 'B')[0].toUpperCase()}
+              {config.nomeBot[0]?.toUpperCase() || 'B'}
             </div>
           )}
           <div>
-            <h3 className="text-white font-semibold">{config?.nomeBot || 'Meu Bot'}</h3>
+            <h3 className="text-white font-semibold">{config.nomeBot}</h3>
             <p className="text-xs text-[#B5BAC1]">Preview do avatar</p>
           </div>
         </div>
@@ -122,8 +135,8 @@ export default function PaginaConfiguracoes() {
         <CampoConfig label="Nome do Bot" descricao="Nome que aparece no Discord (2-32 caracteres)">
           <input
             type="text"
-            value={config?.nomeBot || ''}
-            onChange={(e) => setConfig((c) => (c ? { ...c, nomeBot: e.target.value } : c))}
+            value={config.nomeBot}
+            onChange={(e) => atualizarCampo('nomeBot', e.target.value)}
             minLength={2}
             maxLength={32}
             className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none transition-colors"
@@ -133,8 +146,8 @@ export default function PaginaConfiguracoes() {
         <CampoConfig label="Avatar URL" descricao="URL da imagem do avatar (deve ser PNG, JPG ou GIF)">
           <input
             type="url"
-            value={config?.avatarUrl || ''}
-            onChange={(e) => setConfig((c) => (c ? { ...c, avatarUrl: e.target.value || null } : c))}
+            value={config.avatarUrl || ''}
+            onChange={(e) => atualizarCampo('avatarUrl', e.target.value)}
             placeholder="https://exemplo.com/avatar.png"
             className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none transition-colors"
           />
@@ -143,8 +156,8 @@ export default function PaginaConfiguracoes() {
         <CampoConfig label="Banner URL" descricao="URL da imagem do banner do perfil">
           <input
             type="url"
-            value={config?.bannerUrl || ''}
-            onChange={(e) => setConfig((c) => (c ? { ...c, bannerUrl: e.target.value || null } : c))}
+            value={config.bannerUrl || ''}
+            onChange={(e) => atualizarCampo('bannerUrl', e.target.value)}
             placeholder="https://exemplo.com/banner.png"
             className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none transition-colors"
           />
@@ -153,20 +166,20 @@ export default function PaginaConfiguracoes() {
         <CampoConfig label="Bio" descricao="Descricao que aparece no perfil do bot (max 190 caracteres)">
           <textarea
             rows={3}
-            value={config?.bio || ''}
-            onChange={(e) => setConfig((c) => (c ? { ...c, bio: e.target.value } : c))}
+            value={config.bio}
+            onChange={(e) => atualizarCampo('bio', e.target.value)}
             maxLength={190}
             className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none resize-none transition-colors"
           />
           <p className="text-xs text-[#B5BAC1] mt-1">
-            {(config?.bio || '').length}/190
+            {config.bio.length}/190
           </p>
         </CampoConfig>
 
         <CampoConfig label="Status" descricao="Status de presenca do bot">
           <select
-            value={config?.status || 'online'}
-            onChange={(e) => setConfig((c) => (c ? { ...c, status: e.target.value } : c))}
+            value={config.status}
+            onChange={(e) => atualizarCampo('status', e.target.value)}
             className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none transition-colors"
           >
             <option value="online">Online 🟢</option>
@@ -179,8 +192,8 @@ export default function PaginaConfiguracoes() {
         <CampoConfig label="Atividade" descricao='Mensagem de status ("Jogando...", "Assistindo..."). Use {servidores} para mostrar o numero de servidores'>
           <input
             type="text"
-            value={config?.atividade || ''}
-            onChange={(e) => setConfig((c) => (c ? { ...c, atividade: e.target.value } : c))}
+            value={config.atividade}
+            onChange={(e) => atualizarCampo('atividade', e.target.value)}
             maxLength={128}
             className="w-full bg-[#1E1F22] border border-[#3F4147] rounded-md px-3 py-2 text-white text-sm focus:border-[#5865F2] focus:outline-none transition-colors"
           />
