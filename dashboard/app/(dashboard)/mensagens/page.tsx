@@ -32,6 +32,10 @@ interface ShopeeConfig {
 }
 
 const TIMER_PRESETS = [
+  { label: '10 seg', valor: 10 },
+  { label: '30 seg', valor: 30 },
+  { label: '1 min', valor: 60 },
+  { label: '5 min', valor: 300 },
   { label: '30 min', valor: 1800 }, { label: '1 hora', valor: 3600 },
   { label: '2 horas', valor: 7200 }, { label: '4 horas', valor: 14400 },
   { label: '6 horas', valor: 21600 }, { label: '12 horas', valor: 43200 },
@@ -143,7 +147,7 @@ export default function PaginaMensagens() {
     const preset = TIMER_PRESETS.find(t => t.label === timerHoras);
     if (preset && preset.valor > 0) return preset.valor;
     if (timerHoras === 'Personalizado' && timerPersonalizado) return parseInt(timerPersonalizado) * 60 || 60;
-    return 3600;
+    return 60;
   }
 
   function togglePreset(key: string) {
@@ -185,6 +189,7 @@ export default function PaginaMensagens() {
   }
 
   function formatarIntervalo(seg: number): string {
+    if (seg < 60) return `${seg}s`;
     if (seg < 3600) return `${seg / 60}min`;
     if (seg < 86400) return `${seg / 3600}h`;
     return `${seg / 86400}d`;

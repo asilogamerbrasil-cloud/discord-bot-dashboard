@@ -22,10 +22,12 @@ async function discordFetch(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `Erro ${res.status}`);
+    const errText = await res.text().catch(() => '');
+    const errMsg = errText ? (() => { try { return JSON.parse(errText).message; } catch { return errText.substring(0, 200); } })() : res.statusText;
+    throw new Error(errMsg || `Erro ${res.status}`);
   }
 
+  if (res.status === 204) return { sucesso: true };
   return res.json();
 }
 
