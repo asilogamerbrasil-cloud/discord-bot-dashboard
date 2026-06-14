@@ -2,12 +2,22 @@ const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:3000';
 const API_KEY = process.env.INTERNAL_API_KEY || '';
 const INTERVALO_VERIFICACAO = 60 * 1000; // 1 minuto
 
+async function confirmarEnvio(id: number) {
+  try {
+    await fetch(`${DASHBOARD_URL}/api/mensagens/pendentes?key=${API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+  } catch {}
+}
+
 async function buscarPendentes() {
   try {
     const res = await fetch(`${DASHBOARD_URL}/api/mensagens/pendentes?key=${API_KEY}`);
     if (!res.ok) {
       if (res.status !== 401) console.error('[Agendador] Erro API:', res.status);
-      return;
+      return [];
     }
     const data = await res.json();
     return (data.pendentes || []) as Array<{
@@ -38,6 +48,8 @@ export async function iniciarAgendador(client: { channels: { fetch: (id: string)
       console.log(`[Agendador] ${pendentes.length} mensagens pendentes`);
 
       for (const msg of pendentes) {
+        let enviadoComSucesso = false;
+
         for (const canalInfo of msg.canais) {
           try {
             const channel: unknown = await client.channels.fetch(canalInfo.canalId);
@@ -56,10 +68,15 @@ export async function iniciarAgendador(client: { channels: { fetch: (id: string)
             }
 
             await ch.send(sendOpts);
+            enviadoComSucesso = true;
             console.log(`[Agendador] Enviado: #${canalInfo.canalNome} em ${canalInfo.servidorNome}`);
           } catch (erro) {
             console.error(`[Agendador] Erro ao enviar para ${canalInfo.canalNome}:`, erro);
           }
+        }
+
+        if (enviadoComSucesso) {
+          await confirmarEnvio(msg.id);
         }
       }
     } catch (erro) {

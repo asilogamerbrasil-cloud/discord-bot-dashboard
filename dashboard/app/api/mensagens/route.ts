@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, nome, tipo, mensagem, timerIntervalo, servidoresCanais, shopeePreset, ativo } = body;
+    const { id, nome, tipo, mensagem, timerIntervalo, servidoresCanais, shopeePreset, ativo, ultimoEnvio } = body;
 
     if (!id) {
       return NextResponse.json({ erro: 'ID obrigatorio' }, { status: 400 });
@@ -57,6 +57,7 @@ export async function PATCH(req: NextRequest) {
     if (servidoresCanais !== undefined) dados.servidoresCanais = JSON.stringify(servidoresCanais);
     if (shopeePreset !== undefined) dados.shopeePreset = shopeePreset;
     if (typeof ativo === 'boolean') dados.ativo = ativo;
+    if (ultimoEnvio === null) dados.ultimoEnvio = null;
 
     await db.update(mensagensProgramadas).set(dados).where(eq(mensagensProgramadas.id, id));
 

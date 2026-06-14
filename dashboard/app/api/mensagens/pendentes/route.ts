@@ -201,17 +201,29 @@ export async function GET(req: NextRequest) {
 
     const resultado = pendentes.filter(Boolean);
 
-    for (const p of resultado) {
-      if (!p) continue;
-      await db
-        .update(mensagensProgramadas)
-        .set({ ultimoEnvio: new Date() })
-        .where(eq(mensagensProgramadas.id, p.id));
-    }
-
     return NextResponse.json({ pendentes: resultado });
   } catch (erro) {
     console.error('Erro ao buscar pendentes:', erro);
+    return NextResponse.json({ erro: 'Erro interno' }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('key');
+  if (apiKey !== process.env.INTERNAL_API_KEY) {
+    return NextResponse.json({ erro: 'Nao autorizado' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await req.json();
+    if (!id) return NextResponse.json({ erro: 'ID obrigatorio' }, { status: 400 });
+
+    const db = getDb();
+    await db.update(mensagensProgramadas).set({ ultimoEnvio: new Date() }).where(eq(mensagensProgramadas.id, id));
+
+    return NextResponse.json({ sucesso: true });
+  } catch (erro) {
+    console.error('Erro ao confirmar envio:', erro);
     return NextResponse.json({ erro: 'Erro interno' }, { status: 500 });
   }
 }

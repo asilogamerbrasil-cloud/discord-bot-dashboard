@@ -198,6 +198,16 @@ export default function PaginaMensagens() {
     await carregarMensagens();
   }
 
+  async function forcarEnvio(m: MensagemProgramada) {
+    await fetch('/api/mensagens', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: m.id, ultimoEnvio: null }),
+    });
+    setStatusMsg({ tipo: 'sucesso', texto: 'Proximo ciclo do agendador enviara esta mensagem!' });
+    await carregarMensagens();
+  }
+
   async function excluir(id: number) {
     if (!confirm('Excluir mensagem programada?')) return;
     await fetch(`/api/mensagens?id=${id}`, { method: 'DELETE' });
@@ -253,12 +263,13 @@ export default function PaginaMensagens() {
                     {m.tipo === 'shopee_preset' ? <ShoppingBag className="w-5 h-5 text-[#EE4D2D]" /> : <Type className="w-5 h-5 text-[#5865F2]" />}
                     <div>
                       <h3 className="text-white font-semibold">{m.nome}</h3>
-                      <p className="text-xs text-[#B5BAC1] flex items-center gap-2">
+                      <p className="text-xs text-[#B5BAC1] flex items-center gap-2 flex-wrap">
                         <Clock className="w-3 h-3"/>{formatarIntervalo(m.timerIntervalo)}
                         <span className="text-[#3F4147]">|</span>
                         {canais.length} canal(is)
                         <span className="text-[#3F4147]">|</span>
                         {m.tipo === 'shopee_preset' ? `Shopee: ${SHOPEE_PRESETS_LIST.find(p=>p.key===m.shopeePreset)?.nome.split(' ').slice(0,2).join(' ') || 'Geral'}` : 'Manual'}
+                        {m.ultimoEnvio && <><span className="text-[#3F4147]">|</span> Ultimo: {new Date(m.ultimoEnvio).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</>}
                       </p>
                     </div>
                   </div>
@@ -270,10 +281,11 @@ export default function PaginaMensagens() {
                   </label>
                 </div>
                 <div className="bg-[#1E1F22] rounded p-3 mb-3">
-                  <p className="text-sm text-[#B5BAC1] whitespace-pre-wrap line-clamp-3">{m.mensagem || '(Sem conteudo)'}</p>
+                  <p className="text-sm text-[#B5BAC1] whitespace-pre-wrap line-clamp-3">{m.mensagem || (m.tipo === 'shopee_preset' ? 'Os produtos serao buscados automaticamente na Shopee no momento do envio.' : '(Sem conteudo)')}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button onClick={() => editarMensagem(m)} className="flex items-center gap-1 text-xs text-[#B5BAC1] hover:text-white bg-[#313338] hover:bg-[#3F4147] px-3 py-1.5 rounded transition-colors"><Edit3 className="w-3 h-3"/>Editar</button>
+                  <button onClick={() => forcarEnvio(m)} className="flex items-center gap-1 text-xs text-[#2ECC71] hover:text-white bg-[#2ECC71]/10 hover:bg-[#2ECC71]/20 px-3 py-1.5 rounded transition-colors"><Send className="w-3 h-3"/>Forcar Agora</button>
                   <button onClick={() => excluir(m.id)} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded transition-colors"><Trash2 className="w-3 h-3"/>Excluir</button>
                 </div>
               </div>
