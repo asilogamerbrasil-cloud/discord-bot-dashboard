@@ -36,8 +36,20 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await discordFetch(`/users/@me/guilds/${params.id}`, { method: 'DELETE' });
-    return NextResponse.json({ sucesso: true });
+    const token = process.env.DISCORD_TOKEN;
+    if (!token) return NextResponse.json({ erro: 'DISCORD_TOKEN nao configurado' }, { status: 500 });
+
+    const res = await fetch(`https://discord.com/api/v10/users/@me/guilds/${params.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bot ${token}` },
+    });
+
+    if (res.status === 204 || res.status === 404) {
+      return NextResponse.json({ sucesso: true, removido: res.status === 204 });
+    }
+
+    const err = await res.text().catch(() => '');
+    return NextResponse.json({ erro: err || `Erro ${res.status}` }, { status: 500 });
   } catch (erro: unknown) {
     return NextResponse.json({ erro: (erro as Error).message }, { status: 500 });
   }
