@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  return NextResponse.json({
-    DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID || 'NAO_DEFINIDO',
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'NAO_DEFINIDO',
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? 'DEFINIDO' : 'NAO_DEFINIDO',
-    DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ? 'DEFINIDO' : 'NAO_DEFINIDO',
-    DATABASE_URL: process.env.DATABASE_URL || 'NAO_DEFINIDO',
-  });
+  const relevantKeys = [
+    'DISCORD_CLIENT_ID',
+    'DISCORD_CLIENT_SECRET', 
+    'DISCORD_TOKEN',
+    'NEXTAUTH_URL',
+    'NEXTAUTH_SECRET',
+    'DATABASE_URL',
+    'RAILWAY_SERVICE_ID',
+    'RAILWAY_ENVIRONMENT_ID',
+    'RAILWAY_PROJECT_ID',
+  ];
+
+  const env: Record<string, string> = {};
+  for (const key of relevantKeys) {
+    env[key] = process.env[key] ? 'SET' : 'MISSING';
+  }
+  
+  return NextResponse.json({ env, cwd: process.cwd(), nodeEnv: process.env.NODE_ENV });
 }
