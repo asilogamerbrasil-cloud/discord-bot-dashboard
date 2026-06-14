@@ -54,7 +54,7 @@ export const administradores = sqliteTable('administradores', {
 
 export const integracoes = sqliteTable('integracoes', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  plataforma: text('plataforma', { enum: ['youtube', 'twitch', 'tiktok', 'instagram'] }).notNull(),
+  plataforma: text('plataforma', { enum: ['youtube', 'twitch', 'tiktok', 'instagram', 'shopee'] }).notNull(),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   tokenExpira: integer('token_expira', { mode: 'timestamp' }),

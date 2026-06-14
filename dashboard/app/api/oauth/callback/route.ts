@@ -130,12 +130,23 @@ export async function GET(req: NextRequest) {
         });
       }
     }
+    if (plataforma === 'twitch') {
+      try {
+        const followersRes = await fetch(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${mapped.contaId}`, {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}`, 'Client-Id': clientId },
+        });
+        if (followersRes.ok) {
+          const followersData = await followersRes.json() as { total?: number };
+          metadata = JSON.stringify({ seguidores: followersData.total || 0 });
+        }
+      } catch (e) { console.error('Twitch followers fetch error:', e); }
+    }
 
     const db = getDb();
     const existente = await db
       .select()
       .from(integracoes)
-      .where(eq(integracoes.plataforma, plataforma as 'youtube' | 'twitch'))
+      .where(eq(integracoes.plataforma, plataforma as 'youtube' | 'twitch' | 'instagram' | 'shopee'))
       .limit(1);
 
     if (existente.length > 0) {
@@ -154,7 +165,7 @@ export async function GET(req: NextRequest) {
         .where(eq(integracoes.id, existente[0].id));
     } else {
       await db.insert(integracoes).values({
-        plataforma: plataforma as 'youtube' | 'twitch' | 'tiktok' | 'instagram',
+        plataforma: plataforma as 'youtube' | 'twitch' | 'tiktok' | 'instagram' | 'shopee',
         nomeConta: mapped.nomeConta,
         avatarUrl: mapped.avatarUrl,
         contaId: mapped.contaId,
