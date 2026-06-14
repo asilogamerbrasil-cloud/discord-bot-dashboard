@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import { createServer } from 'http';
 
 config();
@@ -18,11 +18,7 @@ servidor.listen(PORTA, () => {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Channel, Partials.Message, Partials.User],
 });
 
 async function iniciar() {
