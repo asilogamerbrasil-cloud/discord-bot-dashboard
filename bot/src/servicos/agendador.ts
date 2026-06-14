@@ -1,4 +1,4 @@
-const DASHBOARD_URL = 'http://dashboard.railway.internal';
+const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:3000';
 const API_KEY = process.env.INTERNAL_API_KEY || '';
 const INTERVALO_VERIFICACAO = 60 * 1000;
 
