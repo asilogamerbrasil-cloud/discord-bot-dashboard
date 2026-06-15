@@ -303,10 +303,10 @@ export async function GET(req: NextRequest) {
       }
     }));
 
-    const resultado = pendentes.filter(Boolean);
+    const resultado = pendentes.filter((p): p is NonNullable<typeof p> => p !== null);
     console.log(`[${T()}] [Pendentes GET] RESULTADO: ${resultado.length} pendentes retornadas de ${ativas.length} ativas`);
     if (resultado.length > 0) {
-      console.log(`[${T()}] [Pendentes GET] IDs pendentes: ${resultado.map((p: { id: number }) => `#${p.id}`).join(', ')}`);
+      console.log(`[${T()}] [Pendentes GET] IDs pendentes: ${resultado.map((p) => `#${p.id}`).join(', ')}`);
     }
     return NextResponse.json({ pendentes: resultado });
   } catch (erro) {
