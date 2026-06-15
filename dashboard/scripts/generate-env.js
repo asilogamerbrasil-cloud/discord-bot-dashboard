@@ -8,6 +8,7 @@ const envVars = {
   NEXTAUTH_URL: process.env.NEXTAUTH_URL || '',
   NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || '',
   DATABASE_URL: process.env.DATABASE_URL || 'file:./data/bot.db',
+  INTERNAL_API_KEY: process.env.INTERNAL_API_KEY || '',
   YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
   YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET || '',
   TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID || '',
