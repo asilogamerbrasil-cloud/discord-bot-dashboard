@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { integracoes } from '@/lib/schema';
 import type { NextRequest } from 'next/server';
+import { createHash } from 'crypto';
 
 type StatusPlataforma = 'online' | 'error' | 'offline' | 'unknown';
 
@@ -53,15 +54,21 @@ async function checkShopee(i: typeof integracoes.$inferSelect): Promise<StatusRe
     return { plataforma: 'shopee', status: 'offline', nome: i.nomeConta, mensagem: 'Sem credenciais' };
   }
   try {
-    const query = `{ getCategories { success } }`;
+    const query = `query($keyword: String!, $limit: Int) { productOfferV2(keyword: $keyword, limit: $limit) { nodes { productName } } }`;
+    const body = { query, variables: { keyword: 'teste', limit: 1 } };
+    const bodyString = JSON.stringify(body);
+    const timestamp = Math.floor(Date.now() / 1000);
+    const factor = `${i.contaId}${timestamp}${bodyString}${i.accessToken}`;
+    const signature = createHash('sha256').update(factor, 'utf8').digest('hex');
+    const auth = `SHA256 Credential=${i.contaId},Timestamp=${timestamp},Signature=${signature}`;
+
     const res = await fetch('https://open-api.affiliate.shopee.com.br/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'App-Id': i.contaId,
-        'App-Secret': i.accessToken,
+        'Authorization': auth,
       },
-      body: JSON.stringify({ query }),
+      body: bodyString,
     });
     if (!res.ok) {
       return { plataforma: 'shopee', status: 'error', nome: i.nomeConta, mensagem: `HTTP ${res.status}` };
