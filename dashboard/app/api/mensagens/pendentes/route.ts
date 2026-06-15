@@ -17,12 +17,12 @@ interface ShopeePresetDef {
 
 const SHOPEE_PRESETS: Record<string, ShopeePresetDef> = {
   top5_monitores:       { nome: 'Top 5 do Mes em Monitores',      emoji: '🏆', cor: 0xF1C40F, keywords: ['monitor gamer', 'monitor 144hz', 'monitor 4k', 'monitor curvo', 'monitor ultrawide'],         categoria: 'monitores',     defaultOrdenacao: 'sales' },
-  promocoes_hardware:   { nome: 'Promocoes em Hardware',          emoji: '🔥', cor: 0xE74C3C, keywords: ['placa de video', 'processador', 'memoria ram', 'ssd', 'fonte', 'placa mae', 'water cooler'], categoria: 'hardware',     defaultOrdenacao: 'discount' },
-  pcs_gamers_baratos:   { nome: 'PCs Gamers Mais Baratos do Mes', emoji: '💻', cor: 0x3498DB, keywords: ['pc gamer', 'computador gamer', 'notebook gamer'],                                        categoria: 'computadores',  defaultOrdenacao: 'price_asc' },
+  promocoes_hardware:   { nome: 'Promocoes em Hardware',          emoji: '🔥', cor: 0xE74C3C, keywords: ['placa de video', 'processador', 'memoria ram', 'ssd', 'fonte', 'placa mae', 'water cooler'], categoria: 'hardware',     defaultOrdenacao: 'sales' },
+  pcs_gamers_baratos:   { nome: 'PCs Gamers Mais Baratos do Mes', emoji: '💻', cor: 0x3498DB, keywords: ['pc gamer', 'computador gamer', 'notebook gamer'],                                        categoria: 'computadores',  defaultOrdenacao: 'price' },
   mais_vendidos_games:  { nome: 'Mais Vendidos em Games',         emoji: '🎮', cor: 0x9B59B6, keywords: ['jogo ps5', 'jogo ps4', 'jogo xbox', 'jogo switch', 'controle', 'cadeira gamer'],       categoria: 'games',        defaultOrdenacao: 'sales' },
-  ofertas_relampago:    { nome: 'Ofertas Relampago',              emoji: '⚡', cor: 0xE67E22, keywords: ['promocao', 'oferta', 'desconto', 'queima estoque'],                                       categoria: 'geral',        defaultOrdenacao: 'discount' },
+  ofertas_relampago:    { nome: 'Ofertas Relampago',              emoji: '⚡', cor: 0xE67E22, keywords: ['promocao', 'oferta', 'desconto', 'queima estoque'],                                       categoria: 'geral',        defaultOrdenacao: 'commission' },
   perifericos_destaque: { nome: 'Perifericos em Destaque',        emoji: '🖱️', cor: 0x1ABC9C, keywords: ['mouse gamer', 'headset gamer', 'teclado mecanico', 'mousepad', 'microfone', 'webcam'],  categoria: 'perifericos',   defaultOrdenacao: 'sales' },
-  achadinhos_dia:       { nome: 'Achadinhos do Dia',              emoji: '📦', cor: 0x2ECC71, keywords: ['promocao shopee', 'cupom', 'frete gratis', 'mais vendidos'],                              categoria: 'geral',        defaultOrdenacao: 'discount' },
+  achadinhos_dia:       { nome: 'Achadinhos do Dia',              emoji: '📦', cor: 0x2ECC71, keywords: ['promocao shopee', 'cupom', 'frete gratis', 'mais vendidos'],                              categoria: 'geral',        defaultOrdenacao: 'sales' },
 };
 
 function formatarMoeda(v: number) { return `R$ ${v.toFixed(2).replace('.', ',')}`; }
@@ -39,7 +39,7 @@ async function buscarProdutosShopee(keyword: string, appId: string, appSecret: s
     }`;
   const res = await fetch('https://open-api.affiliate.shopee.com.br/graphql', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'App-Id': appId, 'App-Secret': appSecret },
-    body: JSON.stringify({ query, variables: { keyword, pageSize } }),
+    body: JSON.stringify({ query, variables: { keyword, pageSize, orderBy } }),
   });
   console.log(`[Shopee API] Busca status=${res.status}`);
   if (!res.ok) { console.log('[Shopee API] Erro HTTP:', res.status); return []; }
