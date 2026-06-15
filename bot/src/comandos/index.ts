@@ -11,8 +11,9 @@ export const comandos = new Map<string, Comando>();
 import { comandoPing } from './ping.js';
 import { comandoStatus } from './status.js';
 import { comandoConfig } from './config.js';
+import { comandoBuscar } from './buscar.js';
 
-[comandoPing, comandoStatus, comandoConfig].forEach((cmd) => {
+[comandoPing, comandoStatus, comandoConfig, comandoBuscar].forEach((cmd) => {
   comandos.set(cmd.dados.name, cmd);
 });
 
