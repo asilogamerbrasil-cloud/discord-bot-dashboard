@@ -285,7 +285,8 @@ const EMOJIS_BULLET = ['🔥', '⚡', '💥', '🚀', '🎮', '💻', '🖥️',
 async function buscarProdutosShopee(keyword: string, appId: string, appSecret: string, sortType: number, limit: number): Promise<ShopeeProductV2[]> {
   console.log(`[${T()}] [Shopee API] keyword="${keyword}" limit=${limit}`);
 
-  const query = `query { productOfferV2(keyword: "${keyword.replace(/"/g, '\\"')}", limit: ${limit}, sortType: ${sortType}) { nodes { productName productLink price commissionRate shopName ratingStar offerLink imageUrl sales shopId itemId sellerCommissionRate } } }`;
+  const sortPart = sortType && sortType > 0 ? `, sortType: ${sortType}` : '';
+  const query = `query { productOfferV2(keyword: "${keyword.replace(/"/g, '\\"')}", limit: ${limit}${sortPart}) { nodes { productName productLink price commissionRate shopName ratingStar offerLink imageUrl sales shopId itemId sellerCommissionRate } } }`;
   const body = { query };
   const bodyString = JSON.stringify(body);
 
