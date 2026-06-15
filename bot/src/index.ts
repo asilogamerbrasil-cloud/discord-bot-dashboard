@@ -1,8 +1,10 @@
 import { config } from 'dotenv';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { createServer } from 'http';
 
-config();
+config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '.env') });
 
 const PORTA = parseInt(process.env.PORT || '3001');
 
