@@ -276,6 +276,21 @@ const SHOPEE_PRESETS: Record<string, ShopeePresetDef> = {
   },
 };
 
+// Compatibilidade com chaves antigas
+const ALIASES: Record<string, string> = {
+  'ofertas_relampago': 'flash_simples',
+  'achadinhos_dia': 'achadinhos_dia',
+  'top5_monitores': 'monitores_ranking',
+  'promocoes_hardware': 'perifericos_setup',
+  'pcs_gamers_baratos': 'gpu_custo',
+  'mais_vendidos_games': 'gpu_ranking',
+  'perifericos_destaque': 'perifericos_setup',
+};
+
+function resolverPreset(key: string): string {
+  return ALIASES[key] || key;
+}
+
 function formatarMoeda(v: number) { return `R$ ${v.toFixed(2).replace(/\./g, ',')}`; }
 
 function emojiNumero(i: number): string {
@@ -346,8 +361,9 @@ async function montarMensagemShopee(
     qtdProdutos?: number; sortType?: number; cta?: string; mensagemId?: number;
   } = {}, db: ReturnType<typeof getDb>
 ): Promise<{ mensagem: string; embeds: Array<Record<string, unknown>>; presetKey: string; produtosIds: number[] } | null> {
-  const preset = SHOPEE_PRESETS[presetKey];
-  if (!preset) { console.error(`[${T()}] Preset "${presetKey}" nao encontrado`); return null; }
+  const resolvedKey = resolverPreset(presetKey);
+  const preset = SHOPEE_PRESETS[resolvedKey];
+  if (!preset) { console.error(`[${T()}] Preset "${presetKey}" (resolvido: "${resolvedKey}") nao encontrado`); return null; }
 
   const qtd = config.qtdProdutos || preset.qtdProdutos;
   const sortType = config.sortType ?? preset.defaultSortType;
