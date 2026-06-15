@@ -23,8 +23,8 @@ export async function GET() {
     return NextResponse.json({ status: 'erro', mensagem: 'Credenciais incompletas.' });
   }
 
-  const query = `query($keyword: String!, $limit: Int) { productOfferV2(keyword: $keyword, limit: $limit) { nodes { productName } } }`;
-  const body = { query, variables: { keyword: 'teste', limit: 1 } };
+  const query = '{ productOfferV2(keyword: "teste", limit: 1) { nodes { productName } } }';
+  const body = { query };
   const bodyString = JSON.stringify(body);
 
   try {

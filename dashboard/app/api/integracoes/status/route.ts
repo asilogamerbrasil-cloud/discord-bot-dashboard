@@ -54,8 +54,8 @@ async function checkShopee(i: typeof integracoes.$inferSelect): Promise<StatusRe
     return { plataforma: 'shopee', status: 'offline', nome: i.nomeConta, mensagem: 'Sem credenciais' };
   }
   try {
-    const query = `query($keyword: String!, $limit: Int) { productOfferV2(keyword: $keyword, limit: $limit) { nodes { productName } } }`;
-    const body = { query, variables: { keyword: 'teste', limit: 1 } };
+    const query = '{ productOfferV2(keyword: "teste", limit: 1) { nodes { productName } } }';
+    const body = { query };
     const bodyString = JSON.stringify(body);
     const timestamp = Math.floor(Date.now() / 1000);
     const factor = `${i.contaId}${timestamp}${bodyString}${i.accessToken}`;
